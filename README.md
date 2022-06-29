@@ -11,7 +11,7 @@ A HyperNetwork approach to drug-target interaction prediction.
 | **[Data](#data)**
 | **[Citation](#citation)**
 
-![plot](visuals/hyper-dti-schema.png)
+![plot](hyper-dti-schema.png)
 
 ## Abstract
 
