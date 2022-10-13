@@ -44,11 +44,13 @@ Will be expanded to benchmarks for binding affinity prediction,
 TBA 
 
 **Accepted posters,**
+
 Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Robust task-specific adaption of drug-target interaction models. Poster presented at: Women in Machine Learning (WiML). Thirty-sixth Conference on Neural Information Processing Systems; 2022 Nov 28- Dec 9; New Orleans, LA.
 
 Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Robust task-specific adaption of drug-target interaction models. Poster presented at: Women in Machine Learning (WiML). Thirty-ninth International Conference on Machine Learning; 2022 Jun 17-23; Baltimore, MD.
 
 ## References
+
 Schmidhuber, J., “Learning to control fast-weight memories: An alternative to dynamic recurrent networks.” Neural Computation, 1992.
 
 Lenselink, E. B., et al. "Beyond the hype: deep neural networks outperform established methods using a ChEMBL bioactivity benchmark set." Journal of cheminformatics 9.1 (2017): 1-14.
@@ -62,4 +64,4 @@ Kim, P. T., et al. "Unsupervised Representation Learning for Proteochemometric M
 Schimunek, J., et al., “Context-enriched molecule representations improve few-shot drug discovery.” OpenReview, to appear, 2022.
 
 ## Keywords
-HyperNetworks, zero-shot, Modern Hopfield Networks, machine learning, deep Learning, drug-target interaction prediction, proteo-chemometrics, drug discovery
+HyperNetworks, zero-shot, Modern Hopfield Networks, deep Learning, drug-target interaction prediction, proteo-chemometrics, drug discovery
