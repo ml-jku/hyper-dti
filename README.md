@@ -17,7 +17,10 @@ A HyperNetwork approach to drug-target interaction prediction.
 
 ### Robust task-specific adaption of drug-target interaction models
 
-Emma Svensson, Pieter-Jan Hoedt, Sepp Hochreiter, Günter Klambauer
+Emma Svensson<sup>1</sup>, Pieter-Jan Hoedt<sup>1</sup>, Sepp Hochreiter<sup>1, 2</sup>, Günter Klambauer<sup>1</sup>
+
+<sup>1</sup> ELLIS Unit Linz and LIT AI Lab, Institute for Machine Learning, Johannes Kepler University Linz, Austria  
+<sup>2</sup> Institute of Advanced Research in Artificial Intelligence (IARAI) 
 
 HyperNetworks have been established as an effective technique to achieve fast adaptation of parameters for neural networks. Recently, HyperNetworks conditioned on descriptors of tasks have improved multi-task generalization in various domains, such as personalized federated learning and neural architecture search. Especially powerful results were achieved in few- and zero-shot settings, attributed to the increased information sharing by the HyperNetwork. Fast discovery of drugs is needed, which requires proteo-chemometric models that are able to generalize drug-target interaction (DTI) predictions in low-data scenarios. State-of-the-art methods apply a few fully-connected layers to concatenated learned embeddings of the protein target and drug compound. In this work, we develop a task-conditioned HyperNetwork approach for the problem of predicting drug-target interactions in drug discovery. We show that when model parameters are predicted for the fully-connected layers processing the drug compound embedding, based on the protein target embedding, predictive performance can be improved over previous methods. Three additional components of our architecture, a) switching to L1 loss, b) integrating a context module for proteins, and c) stable signal propagation, further boost performance and robustness. On an established benchmark for proteo-chemometrics models, our architecture outperforms previous methods in all settings, including few- and zero-shot settings. In an ablation study, we analyze the importance of each of the components of our HyperNetwork approach.
 
@@ -85,4 +88,4 @@ Kim, P. T., et al. "Unsupervised Representation Learning for Proteochemometric M
 Schimunek, J., et al., “Context-enriched molecule representations improve few-shot drug discovery.” OpenReview, to appear, 2022.
 
 ## Keywords
-HyperNetworks, zero-shot, Modern Hopfield Networks, deep Learning, drug-target interaction prediction, proteo-chemometrics, drug discovery
+HyperNetworks, zero-shot, Modern Hopfield Networks, deep learning, drug-target interaction prediction, proteo-chemometrics, drug discovery
