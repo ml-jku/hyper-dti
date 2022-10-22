@@ -4,7 +4,7 @@ import numpy as np
 
 import torch
 
-import constants
+from settings import constants
 
 
 def get_collate(mode, split):

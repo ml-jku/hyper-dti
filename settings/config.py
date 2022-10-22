@@ -7,7 +7,7 @@ def get_configs(parser):
     # Parse commandline arguments
     parser.add_argument("--data_dir", default='', type=str, help='Path to data directory.')
     parser.add_argument("--name", default='run', type=str, help='Experiment name.')
-    parser.add_argument("--wandb_username", default='emmas96', type=str)
+    parser.add_argument("--wandb_username", default='none', type=str)
     parser.add_argument("--seed", default=None, type=int)
 
     # Dataset
@@ -43,15 +43,14 @@ def get_configs(parser):
     parser.add_argument("--oversampling", default=32, type=int,
                         help='How many compounds to oversample if not enough are available for a given protein.')
     parser.add_argument("--learning_rate", "-lr", default=0.0001, type=float)
-    parser.add_argument("--schedular", default='ReduceLROnPlateau', type=str, choices=['None', 'ReduceLROnPlateau'])
+    parser.add_argument("--scheduler", default='ReduceLROnPlateau', type=str, choices=['None', 'ReduceLROnPlateau'])
     parser.add_argument("--lr_patience", default=30, type=int)
     parser.add_argument("--lr_decay", default=0.5, type=float)
     parser.add_argument("--weight_decay", default=1e-5, type=float)
     parser.add_argument("--momentum", default=0.8, type=float)
 
-    parser.add_argument("--architecture", default='HyperKim', type=str, help='From which paper to re-use FCN architecture.',
-                        choices=['RF_STL', 'RF_PCM', 'QSAR_MTL', 'CosineSim', 'Lenselink',
-                                 'Kim', 'KimContext', 'HyperKim', 'GatedPCM', 'MultiGatedPCM'])
+    parser.add_argument("--architecture", default='HyperPCM', type=str, help='Model architecture.',
+                        choices=['DeepPCM', 'HyperPCM'])
     parser.add_argument("--init", default='pwi', type=str, help='How to initialize HyperNetwork parameters.',
                         choices=['default', 'manual', 'pwi', 'manual_pwi'])
     parser.add_argument("--norm", default=None, type=str, choices=['learned'],

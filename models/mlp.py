@@ -1,7 +1,5 @@
 import torch.nn as nn
 
-import constants
-
 
 class Classifier(nn.Module):
     """

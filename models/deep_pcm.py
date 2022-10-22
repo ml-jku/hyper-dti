@@ -1,9 +1,7 @@
-
-import sys
 import torch
 import torch.nn as nn
 
-import constants
+from settings import constants
 from models.context import ContextModule
 from models.noise import EncoderHead
 from models.mlp import Classifier
@@ -23,26 +21,17 @@ class DeepPCM(nn.Module):
         molecule_dim = constants.MOLECULE_LATENT_DIM[molecule_encoder]
         protein_dim = constants.PROTEIN_LATENT_DIM[protein_encoder]
 
-        if 'Context' in args['architecture']:
-            self.context = {'molecule': args['molecule_context'], 'protein': args['protein_context']}
-            if args['molecule_context']:
-                self.molecule_context = ContextModule(in_channels=molecule_dim, args=args['hopfield'])
-            if args['protein_context']:
-                self.protein_context = ContextModule(in_channels=protein_dim, args=args['hopfield'])
+        self.context = {'molecule': args['molecule_context'], 'protein': args['protein_context']}
+        if args['molecule_context']:
+            self.molecule_context = ContextModule(in_channels=molecule_dim, args=args['hopfield'])
+        if args['protein_context']:
+            self.protein_context = ContextModule(in_channels=protein_dim, args=args['hopfield'])
 
-        if 'Kim' in args['architecture']:
-            self.molecule_encoder = EncoderHead(molecule_dim)
-            self.protein_encoder = EncoderHead(protein_dim)
-            in_channels = molecule_dim + 512 + protein_dim + 512
-            hidden_layers = [in_channels, 2048, 1024]
-        elif args['architecture'] == 'Lenselink':
-            in_channels = constants.MOLECULE_IN_DIM + constants.PROTEIN_IN_DIM
-            hidden_layers = [in_channels, 4000, 2000, 1000]
-        else:
-            print(f'No DeepPCM architecture implemented for {args["architecture"]}.')
-            sys.exit()
+        self.molecule_encoder = EncoderHead(molecule_dim)
+        self.protein_encoder = EncoderHead(protein_dim)
+        in_channels = molecule_dim + 512 + protein_dim + 512
+        hidden_layers = [in_channels, 2048, 1024]
 
-        self.encoder_heads = 'Kim' in args['architecture']
         self.classifier = Classifier(hidden_layers=hidden_layers)
 
     def forward(self, batch):
@@ -58,9 +47,8 @@ class DeepPCM(nn.Module):
                 memory = self.memory.get_protein_memory(exclude_pids=batch['pids'] if self.train else []).to(device)
                 protein_batch = self.protein_context(protein_batch, memory)
 
-        if self.encoder_heads:
-            molecule_batch = self.molecule_encoder(molecule_batch.float())
-            protein_batch = self.protein_encoder(protein_batch.float())
+        molecule_batch = self.molecule_encoder(molecule_batch.float())
+        protein_batch = self.protein_encoder(protein_batch.float())
 
         x = self.classifier(torch.cat((molecule_batch, protein_batch), dim=1))
 

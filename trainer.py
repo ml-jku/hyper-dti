@@ -1,7 +1,6 @@
 
 import gc
 import os
-import sys
 import wandb
 import numpy as np
 import pandas as pd
@@ -12,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-import constants
+from settings import constants
 from models.deep_pcm import DeepPCM
 from models.hyper_pcm import HyperPCM
 from datasets.chembl import ChEMBLData
@@ -27,21 +26,10 @@ class ChEMBLPredictor:
 
         self.log = log
         self.wandb_run = None
-        if 'Hyper' in config['architecture']:
-            project_name = 'HyperPCM'
-            config['mode'] = 'Hyper'
-        elif 'MultiGated' in config['architecture']:
-            project_name = 'MultiGatedPCM'
-            config['mode'] = 'Hyper'
-        elif 'Gated' in config['architecture']:
-            project_name = 'GatedPCM'
-            config['mode'] = 'Hyper'
-        else:
-            project_name = 'DeepPCM'
-            config['mode'] = 'PCM'
+
         if log:
             self.wandb_run = wandb.init(
-                project=project_name,
+                project=config['architecture'],
                 group=config['name'].split('/')[0],
                 name=config['name'].split('/')[1],
                 config=config,
@@ -56,12 +44,10 @@ class ChEMBLPredictor:
         constants.OVERSAMPLING = config['oversampling']
         constants.MAIN_BATCH_SIZE = config['main_batch_size']
 
-        if config['mode'] == 'Hyper':
+        if config['architecture'] == 'HyperPCM':
             batching_mode = 'protein'
-        elif config['mode'] == 'PCM':
-            batching_mode = 'pairs'
         else:
-            batching_mode = 'molecule'
+            batching_mode = 'pairs'
 
         self.dataloaders = {}
         if config['subset']:
@@ -99,19 +85,12 @@ class ChEMBLPredictor:
 
         self.opt = optim.Adam(self.model.parameters(), lr=self.config['learning_rate'],
                               weight_decay=self.config['weight_decay'])
-        if self.config['schedular'] == 'ReduceLROnPlateau':
+        if self.config['scheduler'] == 'ReduceLROnPlateau':
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.opt, factor=self.config['lr_decay'],
                                                                   patience=self.config['lr_patience'])
-        if self.config['loss_type'] == 'regression':
-            if self.config['loss_function'] == 'MSE':
-                self.criterion = torch.nn.MSELoss()
-            elif self.config['loss_function'] == 'MAE':
-                self.criterion = torch.nn.L1Loss()
-            else:
-                print('No valid loss function for regression was chosen.')
-                sys.exit()
-        else:
-            self.criterion = torch.nn.BCEWithLogitsLoss()
+
+        assert self.config['loss_function'] in constants.LOSS_FUNCTION.keys()
+        self.criterion = constants.LOSS_FUNCTION[self.config['loss_function']]
 
         steps_no_improvement = 0
         for epoch in range(self.config['epochs']):
@@ -123,7 +102,7 @@ class ChEMBLPredictor:
             for split in ['train', 'valid']:
                 results[split], optimal_threshold = self.run_batches(split=split)
 
-            if self.config['schedular'] == 'ReduceLROnPlateau':
+            if self.config['scheduler'] == 'ReduceLROnPlateau':
                 self.scheduler.step(results['valid']['Loss'])
 
             # Store result and model improvements
@@ -190,7 +169,7 @@ class ChEMBLPredictor:
         return results
 
     def init_model(self):
-        if self.config['architecture'] == 'HyperKim':
+        if self.config['architecture'] == 'HyperPCM':
             hyper_args = {
                 'hyper_fcn': {
                     'hidden_dim': self.config['fcn_hidden_dim'],
@@ -226,7 +205,9 @@ class ChEMBLPredictor:
                 'architecture': self.config['architecture'],
                 'molecule_context': self.config['molecule_context'],
                 'protein_context': self.config['protein_context'],
-                'hopfield': {
+            }
+            if self.config['molecule_context'] or self.config['protein_context']:
+                args['hopfield'] = {
                     'QK_dim': self.config['hopfield_QK_dim'],
                     'heads': self.config['hopfield_heads'],
                     'beta': self.config['hopfield_beta'],
@@ -234,8 +215,10 @@ class ChEMBLPredictor:
                     'layer_norm': self.config['hopfield_layer_norm'],
                     'skip': self.config['hopfield_skip']
                 }
-            }
-            memory = self.train_set if 'Context' in self.config['architecture'] else None
+                memory = self.train_set
+            else:
+                memory = None
+
             self.model = DeepPCM(
                 args=args,
                 molecule_encoder=self.config['molecule_encoder'],

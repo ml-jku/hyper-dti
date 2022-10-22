@@ -34,16 +34,37 @@ Optionally supports: tensorboard and/or wandb
 
 ## Data
 Datasets currently supported,
-- PCM benchmark (Lenselink, 2017) derived from [ChEMBL](https://www.ebi.ac.uk/chembl/)
+- Lenselink benchmark derived from [ChEMBL](https://www.ebi.ac.uk/chembl/). 
+<i>Prepared data with exact folds used will be made available soon.</i>
 
 Will be expanded to benchmarks for binding affinity prediction,
 - KIBA
 - Davis
 
+
+
+## Usage
+Use this repository to train and evaluate our HyperPCM model, or the baseline DeepPCM with
+
+```bash
+$ python main.py --name experiment1 --architecture [model] --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
+```
+Optionally, specify `--wandb_username` to log runs in Weights & Biases and find other flags for hyperparameters and settings in [config.py](https://github.com/ml-jku/hyper-dti/blob/main/settings/config.py).
+
+### Reproducibility
+Run full benchmarking of our re-implementation of the baseline model for any pair of encoders in either of the four settings using
+```bash
+$ python benchmark_deeppcm.py --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
+```
+Reproduce the benchmarking of our model with
+```bash
+$ python benchmark_hyperpcm.py --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
+```
+
 ## Citation
 TBA 
 
-**Accepted posters,**
+<i>Accepted posters,</i>
 
 Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Robust task-specific adaption of drug-target interaction models. Poster presented at: Women in Machine Learning (WiML). Thirty-sixth Conference on Neural Information Processing Systems; 2022 Nov 28- Dec 9; New Orleans, LA.
 

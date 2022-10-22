@@ -2,15 +2,15 @@ import sys
 import argparse
 import torch
 
-from config import get_configs
+from settings.config import get_configs
 from trainer import ChEMBLPredictor, CrossValidator
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='CPI Activity Prediction')
+    parser = argparse.ArgumentParser(description='Drug-target interaction prediction')
     config = get_configs(parser)
-    log = False if sys.gettrace() else True    # Disable logging in Debug mode
+    log = False if sys.gettrace() or config['wandb_username'] == 'none' else True    # Disable logging in Debug mode
     torch.multiprocessing.set_sharing_strategy('file_system')
 
     if config['test']:

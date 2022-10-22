@@ -1,10 +1,8 @@
-
-import sys
 import torch
 import torch.nn as nn
 from collections import OrderedDict
 
-import constants
+from settings import constants
 from models.noise import EncoderHead
 from models.context import ContextModule
 from models.mlp import Classifier

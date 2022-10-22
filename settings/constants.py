@@ -1,4 +1,5 @@
 import sklearn.metrics as metrics
+from torch.nn import BCEWithLogitsLoss, MSELoss, L1Loss
 from utils.metrics import mcc_score
 
 METRICS = {
@@ -31,5 +32,13 @@ PROTEIN_CHARS = {
 MAX_PROTEIN_LEN = 1333
 
 
-LOSS_CLASS = {'classification': ['bce'],
-              'regression': ['mse', 'mae']}
+LOSS_CLASS = {
+    'classification': ['bce'],
+    'regression': ['mse', 'mae']
+}
+
+LOSS_FUNCTION = {
+    'BSE': BCEWithLogitsLoss,
+    'MSE': MSELoss,
+    'MAE': L1Loss,
+}

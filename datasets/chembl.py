@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 import torch
 from torch.utils.data import Dataset
 
-import constants
+from settings import constants
 from utils.bio_encoding import precompute_protein_embeddings, precompute_molecule_embeddings
 
 
