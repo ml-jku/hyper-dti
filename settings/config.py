@@ -75,8 +75,6 @@ def get_configs(parser):
                         help='Beta, scaling in Hopfield module.')
     parser.add_argument("--hopfield_dropout", default=0.5, type=float,
                         help='Dropout in Hopfield module.')
-    parser.add_argument("--hopfield_layer_norm", default=False, action='store_true')
-    parser.add_argument("--hopfield_skip", default=True, action='store_true')
     parser.add_argument("--molecule_context", default=False, action='store_true')
     parser.add_argument("--protein_context", default=False, action='store_true')
 
