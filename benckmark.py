@@ -59,15 +59,12 @@ config = {
         'hopfield_heads': 8,
         'hopfield_beta': 0.044194173824159216,
         'hopfield_dropout': 0.5,
-
     }
 }
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Benchmark PCM models on Lenselink dataset.')
-
-    parser.add_argument("--data_dir", default='', type=str, help='Path to data directory.')
     parser.add_argument("--name", default='benchmark_deeppcm', type=str, help='Experiment name.')
     parser.add_argument("--wandb_username", default='none', type=str)
     parser.add_argument("--split", default='lpo', type=str, help='Splitting strategy.',
@@ -78,12 +75,10 @@ if __name__ == "__main__":
     parser.add_argument("--protein_encoder", default='SeqVec', type=str, help='Protein encoder.',
                         choices=['UniRep', 'SeqVec', 'ProtTransBertBFD', 'ProtTransT5XLU50'])
     args = parser.parse_args()
-
-    # Collected configurations
-    for key, value in vars(args).items():
-        config[key] = value
+    config = vars(args)
 
     # Adding non-optional configurations
+    config['data_dir'] = 'data'
     config['name'] = f'{args.split}/{args.name}_{time.strftime("%H%M")}'
     if config['seed'] is None or config['seed'] == -1:
         config['seed'] = np.random.randint(1, 10000)

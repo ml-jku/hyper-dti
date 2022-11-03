@@ -38,9 +38,9 @@ Optionally supports: tensorboard and/or wandb
 ## Data
 Datasets currently supported,
 - Lenselink benchmark derived from [ChEMBL](https://www.ebi.ac.uk/chembl/). 
-<i>Prepared data with exact folds used will be made available soon.</i>
+Prepared data with exact folds used is available at [```data/ChEMBL/processed/data.pickle```](data/ChEMBL/processed/data.pickle).
 
-Will be expanded to benchmarks for binding affinity prediction,
+Ongoing expansion to benchmarks,
 - KIBA
 - Davis
 
