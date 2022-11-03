@@ -54,7 +54,7 @@ class ChEMBLPredictor:
             print('NOTE: currently running on a small subset of the data, only meant for dev and debugging!')
         for split in ['train', 'valid', 'test']:
             dataset = ChEMBLData(partition=split, data_path=self.data_path, splitting=config['split'],
-                                 debug=config['source'] == 'local', folds=config['folds'], mode=batching_mode,
+                                 folds=config['folds'], mode=batching_mode,
                                  protein_encoder=config['protein_encoder'], molecule_encoder=config['molecule_encoder'],
                                  standardize=config['standardize'], subset=config['subset'])
             if split == 'train':
@@ -180,13 +180,11 @@ class ChEMBLPredictor:
                     'standardize': self.config['standardize']
                 },
                 'hopfield': {
-                    'context_module': self.config['context_module'],
+                    'context_module': self.config['protein_context'],
                     'QK_dim': self.config['hopfield_QK_dim'],
                     'heads': self.config['hopfield_heads'],
                     'beta': self.config['hopfield_beta'],
-                    'dropout': self.config['hopfield_dropout'],
-                    'layer_norm': self.config['hopfield_layer_norm'],
-                    'skip': self.config['hopfield_skip']
+                    'dropout': self.config['hopfield_dropout']
                 },
                 'main_cls': {
                     'hidden_dim': self.config['cls_hidden_dim'],
@@ -211,9 +209,7 @@ class ChEMBLPredictor:
                     'QK_dim': self.config['hopfield_QK_dim'],
                     'heads': self.config['hopfield_heads'],
                     'beta': self.config['hopfield_beta'],
-                    'dropout': self.config['hopfield_dropout'],
-                    'layer_norm': self.config['hopfield_layer_norm'],
-                    'skip': self.config['hopfield_skip']
+                    'dropout': self.config['hopfield_dropout']
                 }
                 memory = self.train_set
             else:
@@ -245,7 +241,7 @@ class ChEMBLPredictor:
                 log_dict['MID'].append(mids.cpu().numpy())
                 log_dict['PID'].append(pids.cpu().numpy())
                 log_dict['Label'].append(labels.cpu().numpy())
-                if self.config['loss_type'] == 'classification':
+                if self.config['loss_function'] in constants.LOSS_CLASS['classification']:
                     labels = (labels > constants.BIOACTIVITY_THRESHOLD)
                 labels = labels.float().to(self.device)
                 logits = self.model(batch)
@@ -261,7 +257,7 @@ class ChEMBLPredictor:
 
                 labels = labels.cpu().numpy()
                 log_dict['Prediction'].append(logits.detach().cpu().numpy())
-                if self.config['loss_type'] == 'regression':
+                if self.config['loss_function'] in constants.LOSS_CLASS['regression']:
                     labels = (labels > constants.BIOACTIVITY_THRESHOLD).astype(float)
                     logits -= constants.BIOACTIVITY_THRESHOLD
                 labels_true.append(labels)
@@ -337,12 +333,12 @@ class CrossValidator:
 
     def summarize(self):
         wandb.init(
-            project='TaskHyperNet-Summary',
+            project=self.config['architecture'],
             group=self.config['name'].split('/')[0],
-            name=f'{self.name.split("/")[1]}_Summary',
+            name=f"{self.config['name'].split('/')[1]}_Summary",
             config=self.config,
             reinit=True,
-            entity="emmas96"
+            entity=self.config['wandb_username']
         )
         for stat, func in {'avg': np.mean, 'std': np.std}.items():
             for split in self.results.keys():

@@ -13,10 +13,6 @@ from settings import constants
 from utils.bio_encoding import precompute_protein_embeddings, precompute_molecule_embeddings
 
 
-def load_chembl_data(data):
-    assert False, 'Currently dataloading is disabled'
-
-
 class ChEMBLData(Dataset):
 
     protein_embeddings = {}
@@ -25,7 +21,7 @@ class ChEMBLData(Dataset):
     protein_scaler = StandardScaler()
     molecule_scaler = StandardScaler()
 
-    def __init__(self, data_path, partition='train', splitting='temporal', folds=None, debug=False, mode='pairs',
+    def __init__(self, data_path, partition='train', splitting='temporal', folds=None, mode='pairs',
                  protein_encoder='SeqVec', molecule_encoder='CDDD', standardize=False, subset=False):
         super(ChEMBLData, self).__init__()
         self.data_path = data_path
@@ -56,14 +52,6 @@ class ChEMBLData(Dataset):
         self.mids = list(data.MID.unique())
         self.triplets = data[["MID", "PID", "Bioactivity"]]
 
-        # Simplification for easier development locally
-        if debug:
-            self.triplets = self.triplets.head(1000)
-            self.remove_empty_items()
-
-        completeness = len(self.triplets) / (len(self.pids) * len(self.mids))
-        print(f'Completeness of {partition} set of {splitting} split is: {completeness}')
-
         for unique_id in self.mids:
             if unique_id not in ChEMBLData.molecule_embeddings.keys():
                 ChEMBLData.molecule_embeddings[unique_id] = molecule_embeddings[unique_id]
@@ -74,8 +62,6 @@ class ChEMBLData(Dataset):
         else:
             self.standardize(unique_ids=self.pids, tmp_embeddings=protein_embeddings,
                              global_embeddings=ChEMBLData.protein_embeddings, scaler=ChEMBLData.protein_scaler)
-            #self.standardize(unique_ids=self.mids, tmp_embeddings=molecule_embeddings,
-            #                 global_embeddings=ChEMBLData.molecule_embeddings, scaler=ChEMBLData.molecule_scaler)
 
         if constants.MAIN_BATCH_SIZE != -1 and partition == 'train':
             for i in range(len(self.pids)):
@@ -147,12 +133,11 @@ class ChEMBLData(Dataset):
 
         file_name = f"processed/data{'_small' if self.subset else ''}.pickle"
 
-        # Process data if not already processed
-        if not os.path.exists(os.path.join(self.data_path, file_name)):
-            data = load_chembl_data(self.data_path)
-            data.to_pickle(os.path.join(self.data_path, file_name))
-        else:
-            data = pd.read_pickle(os.path.join(self.data_path, file_name))
+        assert os.path.exists(os.path.join(self.data_path, file_name)), 'No prepared data was found, ' \
+                                                                        'enter data as data_dir argument ' \
+                                                                        'or prepare the data yourself.'
+
+        data = pd.read_pickle(os.path.join(self.data_path, file_name))
 
         return data.astype({"MID": "int"}, copy=False)
 
@@ -196,26 +181,6 @@ class ChEMBLData(Dataset):
                 (data[strategy] == self.folds['test']) | (data[strategy] == self.folds['valid']), False, True)
             data = data[train_split]
         return data
-
-    def remove_empty_items(self):
-
-        # Clean up Protein id list
-        empty_ids = []
-        for i in range(len(self.pids)):
-            molecule_batch = self.triplets[self.triplets.PID == self.pids[i]]
-            if len(molecule_batch) < 1:
-                empty_ids.append(self.pids[i])
-        for unique_id in empty_ids:
-            self.pids.remove(unique_id)
-
-        # Clean up Molecule id list
-        empty_ids = []
-        for i in range(len(self.mids)):
-            molecule_batch = self.triplets[self.triplets.MID == self.mids[i]]
-            if len(molecule_batch) < 1:
-                empty_ids.append(self.mids[i])
-        for unique_id in empty_ids:
-            self.mids.remove(unique_id)
 
     def standardize(self, unique_ids, tmp_embeddings, global_embeddings, scaler):
         split_embeddings = []

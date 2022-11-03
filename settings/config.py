@@ -25,7 +25,7 @@ def get_configs(parser):
                         help='Standardize encoded inputs based on training set.')
 
     # Evaluation
-    parser.add_argument("--loss_function", default='MSE', type=str, choices=['BCE', 'MSE', 'MAE'])
+    parser.add_argument("--loss_function", default='MAE', type=str, choices=['BCE', 'MSE', 'MAE'])
     parser.add_argument("--test", default=False, action='store_true', help='Only test accompanied checkpointed model.')
     parser.add_argument("--checkpoint", default='', type=str,
                         help='Name of experiment for which model checkpoint to test.')
@@ -65,8 +65,6 @@ def get_configs(parser):
                         help='Number of hidden channels in main CLS layers.')
     parser.add_argument("--cls_layers", default=1, type=int, help='Number of layers in main CLS.')
     # Context module
-    parser.add_argument("--context_module", default=False, action='store_true',
-                        help='Adds a context module to enrich protein embeddings with memory using a Hopfield Network.')
     parser.add_argument("--hopfield_QK_dim", default=512, type=int,
                         help='Query-Key dimension in Hopfield module.')
     parser.add_argument("--hopfield_heads", default=8, type=int,
@@ -80,9 +78,9 @@ def get_configs(parser):
 
     # Encoders
     parser.add_argument("--molecule_encoder", default='CDDD', type=str, help='Molecular encoder.',
-                        choices=['MolBert', 'CDDD', 'ECFP'])
+                        choices=['MolBert', 'CDDD'])
     parser.add_argument("--protein_encoder", default='SeqVec', type=str, help='Protein encoder.',
-                        choices=['UniRep', 'SeqVec', 'ESM', 'ESM1b', 'ProtTransBertBFD', 'ProtTransT5XLU50'])
+                        choices=['UniRep', 'SeqVec', 'ProtTransBertBFD', 'ProtTransT5XLU50'])
 
     args = parser.parse_args()
 
