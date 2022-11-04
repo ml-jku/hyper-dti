@@ -38,17 +38,13 @@ class ChEMBLPredictor:
             )
 
         self.config = config
-        self.data_path = os.path.join(config['data_dir'], 'ChEMBL')
+        self.data_path = os.path.join(config['data_dir'], config['dataset'])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         setup(config['seed'], config['name'])
         constants.OVERSAMPLING = config['oversampling']
         constants.MAIN_BATCH_SIZE = config['main_batch_size']
 
-        if config['architecture'] == 'HyperPCM':
-            batching_mode = 'protein'
-        else:
-            batching_mode = 'pairs'
-
+        batching_mode = 'protein' if config['architecture'] == 'HyperPCM' else 'pairs'
         self.dataloaders = {}
         if config['subset']:
             print('NOTE: currently running on a small subset of the data, only meant for dev and debugging!')
@@ -90,7 +86,7 @@ class ChEMBLPredictor:
                                                                   patience=self.config['lr_patience'])
 
         assert self.config['loss_function'] in constants.LOSS_FUNCTION.keys()
-        self.criterion = constants.LOSS_FUNCTION[self.config['loss_function']]
+        self.criterion = constants.LOSS_FUNCTION[self.config['loss_function']]()
 
         steps_no_improvement = 0
         for epoch in range(self.config['epochs']):
