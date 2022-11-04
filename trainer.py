@@ -41,8 +41,9 @@ class ChEMBLPredictor:
         self.data_path = os.path.join(config['data_dir'], config['dataset'])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         setup(config['seed'], config['name'])
-        constants.OVERSAMPLING = config['oversampling']
-        constants.MAIN_BATCH_SIZE = config['main_batch_size']
+        if config['architecture'] == 'HyperPCM':
+            constants.OVERSAMPLING = config['oversampling']
+            constants.MAIN_BATCH_SIZE = config['main_batch_size']
 
         batching_mode = 'protein' if config['architecture'] == 'HyperPCM' else 'pairs'
         self.dataloaders = {}
