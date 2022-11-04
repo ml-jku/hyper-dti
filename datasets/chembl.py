@@ -42,7 +42,7 @@ class ChEMBLData(Dataset):
                                                   unique_ids=list(data.MID.unique()),
                                                   structures=list(data['Molecule'].unique()))
 
-        if splitting == 'temporal':
+        if splitting in ['temporal', 'leave-drug-out', 'ldo']:
             data = self.temporal_splitting(data=data)
         else:
             data = self.cross_valid_splitting(strategy=splitting, data=data)
@@ -133,9 +133,8 @@ class ChEMBLData(Dataset):
 
         file_name = f"processed/data{'_small' if self.subset else ''}.pickle"
 
-        assert os.path.exists(os.path.join(self.data_path, file_name)), 'No prepared data was found, ' \
-                                                                        'enter data as data_dir argument ' \
-                                                                        'or prepare the data yourself.'
+        assert os.path.exists(os.path.join(self.data_path, file_name)), \
+            'No prepared data was found, give argument "--data_dir data" or prepare the data yourself.'
 
         data = pd.read_pickle(os.path.join(self.data_path, file_name))
 
@@ -173,6 +172,11 @@ class ChEMBLData(Dataset):
         return data
 
     def cross_valid_splitting(self, strategy, data):
+
+        if strategy in ['leave-drug-cluster-out', 'ldco']:
+            strategy = 'lcco'
+        elif strategy in ['leave-target-out', 'lto', 'leave-protein-out']:
+            strategy = 'lpo'
 
         if self.partition in self.folds.keys():
             data = data[data[strategy] == self.folds[self.partition]]
