@@ -10,8 +10,7 @@ from trainer import CrossValidator
 settings = {
     'DeepPCM': {
         'seed': None,
-        'data_source': 'chembl',
-        'dataset': 'lenselink',
+        'dataset': 'ChEMBL',
         'subset': False,
         'standardize': False,
         'loss_function': 'BCE',
@@ -30,8 +29,7 @@ settings = {
     },
     'HyperPCM': {
         'seed': None,
-        'data_source': 'chembl',
-        'dataset': 'lenselink',
+        'dataset': 'ChEMBL',
         'subset': False,
         'standardize': False,
         'loss_function': 'MAE',
