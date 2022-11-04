@@ -77,7 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--protein_encoder", default='SeqVec', type=str, help='Protein encoder.',
                         choices=['UniRep', 'SeqVec', 'ProtTransBertBFD', 'ProtTransT5XLU50'])
     args = parser.parse_args()
-    config = settings[args['model']]
+    config = settings[args.model]
     for key, value in vars(args).items():
         config[key] = value
 

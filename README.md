@@ -9,6 +9,7 @@ A HyperNetwork approach to drug-target interaction prediction.
 **[Abstract](#abstract)**
 | **[Dependencies](#dependencies)**
 | **[Data](#data)**
+| **[Usage](#usage)**
 | **[Citation](#citation)**
 
 ![plot](figures/hyper-dti.png)
@@ -27,27 +28,26 @@ HyperNetworks have been established as an effective technique to achieve fast ad
 ## Dependencies
 
 Main requirements are,
-- CUDA >= 11.4
+- CUDA >= 11.1
 - PyTorch >= 1.9
-- Pytorch-Lightning >= 1.5 
 
-Additional packages: rdkit, aidd-codebase, chemprop, bio-embeddings
+Additional packages: sklearn, 
 
-Optionally supports: tensorboard and/or wandb
+Logging is supported with: wandb
+
+Data preparation and drug/protein encoding require: rdkit, bio-embeddings, [cddd](https://github.com/jrwnter/cddd.git), [molbert](https://github.com/BenevolentAI/MolBERT)
 
 ## Data
 Datasets currently supported,
 - Lenselink benchmark derived from [ChEMBL](https://www.ebi.ac.uk/chembl/). 
-Prepared data with exact folds used is available at [```data/ChEMBL/processed/data.pickle```](data/ChEMBL/processed/data.pickle).
+Prepared data with exact folds used is available in [data.pickle](data/ChEMBL/processed/data.pickle), use flag ```--data_dir data``` to directly reproduce experiments on this dataset.
 
 Ongoing expansion to benchmarks,
 - KIBA
 - Davis
 
-
-
 ## Usage
-Use this repository to train and evaluate our HyperPCM model, or the baseline DeepPCM with
+Use this repository to train and evaluate our HyperPCM model, or the baseline DeepPCM, with
 
 ```bash
 $ python main.py --name experiment1 --architecture [model] --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
@@ -57,15 +57,22 @@ Optionally, specify `--wandb_username` to log runs in Weights & Biases and find 
 ### Reproducibility
 Run full benchmarking of our re-implementation of the baseline model for any pair of encoders in either of the four settings using
 ```bash
-$ python benchmark_deeppcm.py --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
+$ python benchmark.py --model DeepPCM --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
 ```
 Reproduce the benchmarking of our model with
 ```bash
-$ python benchmark_hyperpcm.py --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
+$ python benchmark.py --model HyperPCM --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
 ```
 
 ## Citation
-TBA 
+```
+@inproceedings{svensson2022robust,
+    title={Robust task-specific adaption of drug-target interaction models},
+    author={Svensson, Emma and Hoedt, Pieter-Jan and Hochreiter, Sepp and Klambauer, G\"{u}nter},
+    booktitle={NeurIPS 2022 3nd AI for Science Workshop},
+    year={2022},
+}
+```
 
 <i>Accepted posters,</i>
 
