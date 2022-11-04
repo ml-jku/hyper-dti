@@ -69,7 +69,7 @@ $ python benchmark.py --model HyperPCM --split leave-protein-out --molecule_enco
 @inproceedings{svensson2022robust,
     title={Robust task-specific adaption of drug-target interaction models},
     author={Svensson, Emma and Hoedt, Pieter-Jan and Hochreiter, Sepp and Klambauer, G\"{u}nter},
-    booktitle={NeurIPS 2022 3nd AI for Science Workshop},
+    booktitle={NeurIPS 2022 3d AI for Science Workshop},
     year={2022},
 }
 ```
