@@ -30,12 +30,12 @@ MAX_PROTEIN_LEN = 1333
 
 
 LOSS_CLASS = {
-    'classification': ['bce'],
-    'regression': ['mse', 'mae']
+    'classification': ['BCE'],
+    'regression': ['MSE', 'MAE']
 }
 
 LOSS_FUNCTION = {
-    'BSE': BCEWithLogitsLoss,
+    'BCE': BCEWithLogitsLoss,
     'MSE': MSELoss,
     'MAE': L1Loss,
 }

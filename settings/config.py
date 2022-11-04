@@ -11,16 +11,14 @@ def get_configs(parser):
     parser.add_argument("--seed", default=None, type=int)
 
     # Dataset
-    parser.add_argument("--data_source", default='chembl', type=str, choices=['chembl', 'tdc'], help='Source of data.')
-    parser.add_argument("--dataset", default='lenselink', type=str, choices=['lenselink', 'kiba', 'davis'])
+    parser.add_argument("--dataset", default='ChEMBL', type=str, choices=['ChEMBL'])  # Will soon be expanded to KIBA and Davis
     parser.add_argument("--subset", default=False, action='store_true', help='Take subset of full data for debugging.')
     parser.add_argument("--split", default='lpo', type=str, help='Splitting strategy.',
                         choices=['random', 'temporal',
                                  'leave-drug-out', 'ldo', 'leave-drug-cluster-out', 'ldco', 'lcco',
-                                 'leave-target-out', 'lto', 'lpo', 'leave-drug-target-out', 'ldto'])
+                                 'leave-target-out', 'lto', 'lpo', 'leave-protein-out'])
     parser.add_argument("--test_fold", default=None, type=int, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                         help='Fixed fold to use for testing during cross-validation on Lenselink benchmark.')
-    parser.add_argument("--split_seed", default=46, type=int, help='Random seed for fixed split on TDC benchmarks.')
     parser.add_argument("--standardize", default=False, action='store_true',
                         help='Standardize encoded inputs based on training set.')
 
