@@ -7,7 +7,7 @@ import torch
 
 from trainer import CrossValidator
 
-config = {
+settings = {
     'DeepPCM': {
         'seed': None,
         'data_source': 'chembl',
@@ -65,6 +65,8 @@ config = {
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Benchmark PCM models on Lenselink dataset.')
+    parser.add_argument("--model", default='HyperPCM', type=str, help='Model to benchmark.',
+                        choices=['HyperPCM', 'DeepPCM'])
     parser.add_argument("--name", default='benchmark_deeppcm', type=str, help='Experiment name.')
     parser.add_argument("--wandb_username", default='none', type=str)
     parser.add_argument("--split", default='lpo', type=str, help='Splitting strategy.',
@@ -75,7 +77,9 @@ if __name__ == "__main__":
     parser.add_argument("--protein_encoder", default='SeqVec', type=str, help='Protein encoder.',
                         choices=['UniRep', 'SeqVec', 'ProtTransBertBFD', 'ProtTransT5XLU50'])
     args = parser.parse_args()
-    config = vars(args)
+    config = settings[args['model']]
+    for key, value in vars(args).items():
+        config[key] = value
 
     # Adding non-optional configurations
     config['data_dir'] = 'data'
