@@ -74,9 +74,14 @@ $ python benchmark.py --model HyperPCM --split leave-protein-out --molecule_enco
 }
 ```
 
+<i>Accepted oral,</i>
+
+Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Task-conditioned modeling of drug-target interactions. In
+ELLIS Machine Learning for Molecule Discovery Workshop, 2022.
+
 <i>Accepted posters,</i>
 
-Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Robust task-specific adaption of drug-target interaction models. Poster presented at: Women in Machine Learning (WiML). Thirty-sixth Conference on Neural Information Processing Systems; 2022 Nov 28- Dec 9; New Orleans, LA.
+Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Task-conditioned modeling of drug-target interactions. Poster presented at: Women in Machine Learning (WiML). Thirty-sixth Conference on Neural Information Processing Systems; 2022 Nov 28- Dec 9; New Orleans, LA.
 
 Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Robust task-specific adaption of drug-target interaction models. Poster presented at: Women in Machine Learning (WiML). Thirty-ninth International Conference on Machine Learning; 2022 Jun 17-23; Baltimore, MD.
 
@@ -92,7 +97,8 @@ Chang, O., et al., “Principled weight initialization for hypernetworks.” Int
 
 Kim, P. T., et al. "Unsupervised Representation Learning for Proteochemometric Modeling." International Journal of Molecular Sciences 22.23 (2021): 12882.
 
-Schimunek, J., et al., “Context-enriched molecule representations improve few-shot drug discovery.” OpenReview, to appear, 2022.
+Schimunek, J., et al., “Context-enriched molecule representations improve few-shot drug discovery.” OpenReview, 2022. URL
+https://openreview.net/forum?id=kXXPLBEBVGH.
 
 ## Keywords
 HyperNetworks, zero-shot, Modern Hopfield Networks, deep learning, drug-target interaction prediction, proteo-chemometrics, drug discovery
