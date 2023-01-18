@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from settings import constants
 from models.deep_pcm import DeepPCM
 from models.hyper_pcm import HyperPCM
-from datasets.lenselink import ChEMBLData
+from datamodules.lenselink import ChEMBLData
 from utils.collate import get_collate
 from utils.setup import setup
 
