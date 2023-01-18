@@ -18,15 +18,22 @@ def get_configs(parser):
                                  'leave-drug-out', 'ldo', 'leave-drug-cluster-out', 'ldco', 'lcco',
                                  'leave-target-out', 'lto', 'lpo', 'leave-protein-out'])
     parser.add_argument("--test_fold", default=None, type=int, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-                        help='Fixed fold to use for testing during cross-validation on Lenselink benchmark.')
-    parser.add_argument("--standardize", default=False, action='store_true',
-                        help='Standardize encoded inputs based on training set.')
+                        help='Fixed fold to use for testing during cross-validation predefined benchmarks.')
+    parser.add_argument("--standardize_protein", default=False, action='store_true')        # TODO integrate in trainer
+    parser.add_argument("--standardize_molecule", default=False, action='store_true')       # TODO integrate in trainer
 
     # Evaluation
     parser.add_argument("--loss_function", default='MAE', type=str, choices=['BCE', 'MSE', 'MAE'])
+    parser.add_argument("--raw_reg_labels", default=False, action='store_true',
+                        help='Turns off normalization of regression labels.')               # TODO integrate in trainer
     parser.add_argument("--test", default=False, action='store_true', help='Only test accompanied checkpointed model.')
     parser.add_argument("--checkpoint", default='', type=str,
                         help='Name of experiment for which model checkpoint to test.')
+    parser.add_argument("--transfer", default=False, action='store_true',
+                        help='Option for transferring checkpointed model trained on Lenselink dataset to test sets of '
+                             'either of the other datasets.')                               # TODO integrate in trainer
+    parser.add_argument("--checkpoint_metric", default='Loss', type=str, choices=['Loss', 'MCC', 'last'],
+                        help='Which metric checkpointed to use for eval.')                  # TODO integrate in trainer
     parser.add_argument("--cross_validate", default=False, action='store_true',
                         help='Cross-validate on all 10-folds of the given split (re-runs if split == temporal).')
     parser.add_argument("--folds_list", default=None, type=str)
@@ -48,7 +55,7 @@ def get_configs(parser):
     parser.add_argument("--momentum", default=0.8, type=float)
 
     parser.add_argument("--architecture", default='HyperPCM', type=str, help='Model architecture.',
-                        choices=['DeepPCM', 'HyperPCM'])
+                        choices=['DeepPCM', 'HyperPCM'])                                 # TODO add tabular baselines?
     parser.add_argument("--init", default='pwi', type=str, help='How to initialize HyperNetwork parameters.',
                         choices=['default', 'manual', 'pwi', 'manual_pwi'])
     parser.add_argument("--norm", default=None, type=str, choices=['learned'],
@@ -59,9 +66,10 @@ def get_configs(parser):
                         help='Number of hidden channels in HyperNetwork layers.')
     parser.add_argument("--fcn_layers", default=1, type=int, help='Number of layers in HyperNetwork.')
     # Classification module
-    parser.add_argument("--cls_hidden_dim", default=512, type=int,
+    parser.add_argument("--cls_hidden_dim", default=1024, type=int,
                         help='Number of hidden channels in main CLS layers.')
     parser.add_argument("--cls_layers", default=1, type=int, help='Number of layers in main CLS.')
+
     # Context module
     parser.add_argument("--hopfield_QK_dim", default=512, type=int,
                         help='Query-Key dimension in Hopfield module.')
@@ -71,8 +79,11 @@ def get_configs(parser):
                         help='Beta, scaling in Hopfield module.')
     parser.add_argument("--hopfield_dropout", default=0.5, type=float,
                         help='Dropout in Hopfield module.')
+    parser.add_argument("--hopfield_skip", default=False, action='store_true')              # TODO integrate in trainer
     parser.add_argument("--molecule_context", default=False, action='store_true')
-    parser.add_argument("--protein_context", default=False, action='store_true')
+    parser.add_argument("--protein_context", default=False, action='store_true')            # TODO check right in Hyper
+    parser.add_argument("--remove_batch", default=False, action='store_true',
+                        help='Removes current batch from training set for context module.') # TODO integrate in trainer
 
     # Encoders
     parser.add_argument("--molecule_encoder", default='CDDD', type=str, help='Molecular encoder.',

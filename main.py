@@ -20,6 +20,11 @@ if __name__ == "__main__":
         results = trainer.eval(checkpoint_path=config['checkpoint'])
         print({'train': results['train'], 'valid': results['valid'], 'test': results['test']})
         print(f'Optimal MCC threshold: {trainer.mcc_threshold}')
+    elif config['transfer']:
+        trainer = ChEMBLPredictor(config, log=False)
+        results = trainer.eval(checkpoint_path='checkpoints', metric=config['checkpoint_metric'])
+        print({'train': results['train'], 'valid': results['valid'], 'test': results['test']})
+        print(f'Optimal MCC threshold: {trainer.mcc_threshold}')
     elif config['cross_validate']:
         cross_validator = CrossValidator(config, log=log)
         if config['folds_list'] is not None:
