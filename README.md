@@ -6,6 +6,8 @@
 
 A HyperNetwork approach to drug-target interaction prediction.
 
+**Note:** This branch, called workshop-checkpoint, should mainly be used to reproduce results and state of the project from the workshop papers available on OpenReview from [NeurIPS 2022 AI4Science](https://openreview.net/forum?id=dIX34JWnIAL) and [ELLIS ML4Molecules 2022](https://openreview.net/forum?id=MrUwwGKRhOM).
+
 **[Abstract](#abstract)**
 | **[Dependencies](#dependencies)**
 | **[Data](#data)**
