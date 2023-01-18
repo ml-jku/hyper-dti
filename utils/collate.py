@@ -99,11 +99,13 @@ def collate_protein(elem_dicts, eval=False):
 
         mids = torch.tensor(elem_dict['mid'])
         batch['mids'] = torch.cat((batch['mids'], mids), 0)
+        # batch['mids'].append(elem_dict['mid'])
 
         batch['molecules'].append(torch.tensor(np.stack(elem_dict['molecule'], axis=0)).float())
 
         pids = torch.tensor([elem_dict['pid'] for _ in range(len(elem_dict['mid']))])
         batch['pids'] = torch.cat((batch['pids'], pids), 0)
+        # batch['pids'].append([elem_dict['pid'] for _ in range(len(elem_dict['mid']))])
 
         protein = torch.tensor(elem_dict['protein']).float().unsqueeze(0)
         batch['proteins'] = protein if len(batch['proteins']) == 0 else torch.cat((batch['proteins'], protein), 0)
