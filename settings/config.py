@@ -11,7 +11,7 @@ def get_configs(parser):
     parser.add_argument("--seed", default=None, type=int)
 
     # Dataset
-    parser.add_argument("--dataset", default='ChEMBL', type=str, choices=['ChEMBL'])  # Will soon be expanded to KIBA and Davis
+    parser.add_argument("--dataset", default='Lenselink', type=str, choices=['Lenselink', 'KIBA', 'Davis'])
     parser.add_argument("--subset", default=False, action='store_true', help='Take subset of full data for debugging.')
     parser.add_argument("--split", default='lpo', type=str, help='Splitting strategy.',
                         choices=['random', 'temporal',

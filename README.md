@@ -42,7 +42,7 @@ Data preparation and drug/protein encoding require: rdkit, [bio-embeddings](http
 ## Data
 Datasets currently supported,
 - Lenselink benchmark derived from [ChEMBL](https://www.ebi.ac.uk/chembl/). 
-Prepared data with exact folds used is available in [data.pickle](data/ChEMBL/processed/data.pickle), use flag ```--data_dir data``` to directly reproduce experiments on this dataset.
+Prepared data with exact folds used is available in [data.pickle](data/Lenselink/processed/data.pickle), use flag ```--data_dir data``` to directly reproduce experiments on this dataset.
 
 Ongoing expansion to benchmarks,
 - KIBA
@@ -59,11 +59,19 @@ Optionally, specify `--wandb_username` to log runs in Weights & Biases and find 
 ### Reproducibility
 Run full benchmarking of our re-implementation of the baseline model for any pair of encoders in either of the four settings using
 ```bash
-$ python benchmark.py --model DeepPCM --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
+$ python benchmark_experiments.py --model DeepPCM --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
 ```
 Reproduce the benchmarking of our model with
 ```bash
-$ python benchmark.py --model HyperPCM --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
+$ python benchmark_experiments.py --model HyperPCM --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
+```
+
+### Tabular baselines
+Additionally, tabular baselines such as RandomForest and XGBoost can be fitted and used to make prediction on each dataset. 
+Both baselines can be run with either molecule and protein encoders as well as dataset using e.g. 
+
+```bash
+$ python tabular_experiments.py --baseline RandomForest --dataset Lenselink --molecule_encoder CDDD --protein_encoder SeqVec
 ```
 
 ## Citation
