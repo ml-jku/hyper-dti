@@ -43,8 +43,6 @@ Data preparation and drug/protein encoding require: rdkit, [bio-embeddings](http
 Datasets currently supported,
 - Lenselink benchmark derived from [ChEMBL](https://www.ebi.ac.uk/chembl/). 
 Prepared data with exact folds used is available in [data.pickle](data/Lenselink/processed/data.pickle), use flag ```--data_dir data``` to directly reproduce experiments on this dataset.
-
-Ongoing expansion to benchmarks,
 - KIBA
 - Davis
 
@@ -55,6 +53,13 @@ Use this repository to train and evaluate our HyperPCM model, or the baseline De
 $ python main.py --name experiment1 --architecture [model] --split leave-protein-out --molecule_encoder CDDD --protein_encoder SeqVec
 ```
 Optionally, specify `--wandb_username` to log runs in Weights & Biases and find other flags for hyperparameters and settings in [config.py](https://github.com/ml-jku/hyper-dti/blob/main/settings/config.py).
+
+### Precompute embeddings
+Embeddings for molecules and proteins can either be computed directly during runtime or be prepared in advanced. 
+To precompute them run the following script for the molecule and protein encoders of interest respectively.
+```bash
+$ python precompute_embeddings.py --dataset Lenselink --input_type Molecule --encoder_name CDDD
+```
 
 ### Reproducibility
 Run full benchmarking of our re-implementation of the baseline model for any pair of encoders in either of the four settings using
