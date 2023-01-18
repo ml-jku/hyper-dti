@@ -69,7 +69,7 @@ class TabBaselinePredictor:
             train_y = train_set[["Bioactivity"]]
             test_interactions = test_set[["MID", "PID"]]
             test_y = test_set[["Bioactivity"]]
-        elif 'tdc' in self.dataset:
+        elif 'tdc' in self.dataset:     # Currently TDC versions of KIBA and Davis datasets not supported
             dataset = self.dataset.split('/')[1]
             from tdc.multi_pred import DTI
 

@@ -68,7 +68,7 @@ $ python benchmark_experiments.py --model HyperPCM --split leave-protein-out --m
 
 ### Tabular baselines
 Additionally, tabular baselines such as RandomForest and XGBoost can be fitted and used to make prediction on each dataset. 
-Both baselines can be run with either molecule and protein encoders as well as dataset using e.g. 
+XGBoost requires additional dependency on xgboost package. Both baselines can be run with either molecule and protein encoders as well as dataset using e.g. 
 
 ```bash
 $ python tabular_experiments.py --baseline RandomForest --dataset Lenselink --molecule_encoder CDDD --protein_encoder SeqVec
