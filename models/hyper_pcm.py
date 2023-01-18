@@ -18,15 +18,20 @@ class MainFCN(nn.Module):
     def __init__(self, molecule_encoder, cls_args):
         super(MainFCN, self).__init__()
 
-        self.molecule_encoder = EncoderHead(constants.MOLECULE_LATENT_DIM[molecule_encoder])
-        in_channels = constants.MOLECULE_LATENT_DIM[molecule_encoder] + 512
+        self.noise = cls_args['noise']
+        in_channels = constants.MOLECULE_LATENT_DIM[molecule_encoder]
+        if self.noise:
+            self.molecule_encoder = EncoderHead(constants.MOLECULE_LATENT_DIM[molecule_encoder])
+            in_channels += 512
+
         hidden_layers = [in_channels]
-        for _ in range(cls_args['layers']):
-            hidden_layers.append(cls_args['hidden_dim'])
+        for i in range(cls_args['layers']):
+            hidden_layers.append(int(cls_args['hidden_dim'] / (2 ** (i + 1))))
         self.classifier = Classifier(hidden_layers=hidden_layers)
 
     def forward(self, x):
-        x = self.molecule_encoder(x)
+        if self.noise:
+            x = self.molecule_encoder(x)
         x = self.classifier(x)
         return x.squeeze()
 
@@ -151,12 +156,23 @@ class HyperPCM(nn.Module):
         num_hyper_params = sum([param.nelement() for param in self.hyper.parameters()])
         print(f'The HyperNet itself has {num_hyper_params} number of parameters.')
 
+        param_size = 0
+        buffer_size = 0
+        for model in [self.main, self.hyper]:
+            for param in model.parameters():
+                param_size += param.nelement() * param.element_size()
+            for buffer in model.buffers():
+                buffer_size += buffer.nelement() * buffer.element_size()
+
+        size_all_mb = (param_size + buffer_size) / 1024 ** 2
+        print('Total HyperPCM model size: {:.3f}MB'.format(size_all_mb))
+
     def forward(self, batch):
         device = next(self.hyper.parameters()).device
         protein_batch = batch['proteins'].to(device)
 
         if self.memory is not None:
-            memory = self.memory.get_protein_memory(exclude_pids=batch['pids'] if self.train else []).to(device)
+            memory = self.memory.get_protein_memory(exclude_pids=batch['pids']).to(device)
         else:
             memory = None
 
