@@ -33,11 +33,11 @@ Main requirements are,
 - CUDA >= 11.1
 - PyTorch >= 1.9
 
-Additional packages: sklearn, 
+Additional packages: sklearn, [modern-hopfield-layers](https://github.com/emmas96/modern-hopfield-layers)
 
 Logging is supported with: wandb
 
-Data preparation and drug/protein encoding require: rdkit, bio-embeddings, [cddd](https://github.com/jrwnter/cddd.git), [molbert](https://github.com/BenevolentAI/MolBERT)
+Data preparation and drug/protein encoding require: rdkit, [bio-embeddings](https://github.com/sacdallago/bio_embeddings), [cddd](https://github.com/jrwnter/cddd.git), [molbert](https://github.com/BenevolentAI/MolBERT)
 
 ## Data
 Datasets currently supported,
@@ -73,6 +73,7 @@ $ python benchmark.py --model HyperPCM --split leave-protein-out --molecule_enco
     author={Svensson, Emma and Hoedt, Pieter-Jan and Hochreiter, Sepp and Klambauer, G\"{u}nter},
     booktitle={NeurIPS 2022 3d AI for Science Workshop},
     year={2022},
+    url={https://openreview.net/forum?id=dIX34JWnIAL}
 }
 ```
 

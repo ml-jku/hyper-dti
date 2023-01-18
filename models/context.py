@@ -1,7 +1,7 @@
 import torch.nn as nn
 from functools import partial
+from hflayers import Hopfield
 
-from .hopfield.modules import Hopfield
 from .utils.initialization import get_initializer
 
 
