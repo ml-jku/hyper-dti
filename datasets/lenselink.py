@@ -145,7 +145,7 @@ class ChEMBLData(Dataset):
         if not os.path.exists(os.path.join(self.data_path, f'processed/{encoder_name}_encoding.pickle')):
 
             encoding_fn = precompute_protein_embeddings if input_type == 'Protein' else precompute_molecule_embeddings
-            embeddings = encoding_fn(structures, encoder_name=encoder_name, split='full set', batch_size=16)
+            embeddings = encoding_fn(structures, encoder_name=encoder_name, batch_size=16)
 
             embedding_dict = {}
             for item_id, emb in zip(unique_ids, embeddings):
