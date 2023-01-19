@@ -1,6 +1,7 @@
 
 import gc
 import os
+import sys
 import wandb
 import numpy as np
 import pandas as pd
@@ -15,14 +16,15 @@ from settings import constants
 from models.deep_pcm import DeepPCM
 from models.hyper_pcm import HyperPCM
 from datamodules.lenselink import ChEMBLData
+from datamodules.ozturk import MultiDtiData
 from utils.collate import get_collate
 from utils.setup import setup
 
 
-class ChEMBLPredictor:
+class DtiPredictor:
 
     def __init__(self, config, log=True):
-        super(ChEMBLPredictor, self).__init__()
+        super(DtiPredictor, self).__init__()
 
         self.log = log
         self.wandb_run = None
@@ -49,13 +51,33 @@ class ChEMBLPredictor:
         self.dataloaders = {}
         if config['subset']:
             print('NOTE: currently running on a small subset of the data, only meant for dev and debugging!')
+
+        standard_scaler = {'Protein': None, 'Molecule': None}
+        self.transfer = config['transfer']
+        if self.transfer:
+            data_path = os.path.join(config['data_dir'], 'Lenselink')
+            pretraining_set = ChEMBLData(
+                partition='train', data_path=data_path, splitting=config['split'], folds=config['folds'],
+                mode=batching_mode, protein_encoder=config['protein_encoder'],
+                molecule_encoder=config['molecule_encoder'], label_shift=False, subset=config['subset'],
+                standardize={'Protein': config['standardize_protein'], 'Molecule': config['standardize_molecule']},
+                remove_batch=config['remove_batch'], predefined_scaler=standard_scaler
+            )
+            standard_scaler = {'Protein': pretraining_set.protein_scaler, 'Molecule': pretraining_set.molecule_scaler}
+            self.context = pretraining_set
+
         for split in ['train', 'valid', 'test']:
-            dataset = ChEMBLData(partition=split, data_path=self.data_path, splitting=config['split'],
-                                 folds=config['folds'], mode=batching_mode,
-                                 protein_encoder=config['protein_encoder'], molecule_encoder=config['molecule_encoder'],
-                                 standardize=config['standardize'], subset=config['subset'])
-            if split == 'train':
-                self.train_set = dataset
+            label_shift = (self.config['loss_function'] in constants.LOSS_CLASS['regression'] and
+                           not self.config['raw_reg_labels'])
+            datamodule = ChEMBLData if config['dataset'] == 'Lenselink' else MultiDtiData
+            dataset = datamodule(
+                partition=split, data_path=self.data_path, splitting=config['split'], folds=config['folds'],
+                mode=batching_mode, protein_encoder=config['protein_encoder'],
+                molecule_encoder=config['molecule_encoder'], label_shift=label_shift, subset=config['subset'],
+                standardize={'Protein': config['standardize_protein'], 'Molecule': config['standardize_molecule']},
+                remove_batch=config['remove_batch'], predefined_scaler=standard_scaler)
+            if split == 'train' and not self.transfer:
+                self.context = dataset
             collate_fn = get_collate(mode=batching_mode, split=split)
             self.dataloaders[split] = DataLoader(dataset, num_workers=4, batch_size=config['batch_size'],
                                                  shuffle=(split == 'train'), collate_fn=collate_fn)
@@ -67,8 +89,10 @@ class ChEMBLPredictor:
 
         # Statistics
         self.mcc_threshold = None
-        self.top_valid_results = {metric: -1 for metric in constants.METRICS.keys()}
+        self.top_valid_results = {metric: -1 for metric in constants.METRICS['classification'].keys()}
         self.top_valid_results['Loss'] = np.infty
+        for metric in constants.METRICS['regression'].keys():
+            self.top_valid_results[metric] = np.infty
         self.test_results = None
 
     def train(self):
@@ -86,7 +110,8 @@ class ChEMBLPredictor:
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.opt, factor=self.config['lr_decay'],
                                                                   patience=self.config['lr_patience'])
 
-        assert self.config['loss_function'] in constants.LOSS_FUNCTION.keys()
+        assert self.config['loss_function'] in constants.LOSS_FUNCTION.keys(), \
+            f'Error: Loss-function {self.config["loss_function"]} is not currently supported.'
         self.criterion = constants.LOSS_FUNCTION[self.config['loss_function']]()
 
         steps_no_improvement = 0
@@ -113,7 +138,8 @@ class ChEMBLPredictor:
                     steps_no_improvement = 0
                 elif metric == 'Loss':
                     steps_no_improvement += 1
-                elif metric != 'Loss' and results['valid'][metric] >= self.top_valid_results[metric]:
+                elif metric != 'MSE' and results['valid'][metric] >= self.top_valid_results[metric] or \
+                        metric == 'MSE' and results['valid'][metric] <= self.top_valid_results[metric]:
                     if self.log:
                         wandb.run.summary[f'Best_{metric}'] = results['valid'][metric]
 
@@ -128,6 +154,8 @@ class ChEMBLPredictor:
                 self.wandb_run.log(log_dict, step=epoch)
 
         torch.save(self.model.state_dict(), f'checkpoints/{self.config["name"]}/models/continuous/model_last.t7')
+        if self.log:
+            wandb.run.summary[f'Best_epoch'] = epoch - steps_no_improvement
 
     def eval(self, checkpoint_path=None, metric='MCC'):
         assert not (self.model is None and checkpoint_path is None), \
@@ -142,7 +170,7 @@ class ChEMBLPredictor:
             self.init_model()
 
         if checkpoint_path is not None:
-            model_path = os.path.join(checkpoint_path, f'models/model{name_ext}.t7')
+            model_path = checkpoint_path
         else:
             model_path = f'checkpoints/{self.config["name"]}/models/model{name_ext}.t7'
         self.model.load_state_dict(torch.load(model_path))
@@ -171,24 +199,28 @@ class ChEMBLPredictor:
                 'hyper_fcn': {
                     'hidden_dim': self.config['fcn_hidden_dim'],
                     'layers': self.config['fcn_layers'],
+                    'batch_norm': self.config['fcn_batch_norm'],
                     'selu': self.config['selu'],
                     'norm': self.config['norm'],
                     'init': self.config['init'],
-                    'standardize': self.config['standardize']
+                    'standardize': self.config['standardize_protein']
                 },
                 'hopfield': {
                     'context_module': self.config['protein_context'],
                     'QK_dim': self.config['hopfield_QK_dim'],
                     'heads': self.config['hopfield_heads'],
                     'beta': self.config['hopfield_beta'],
-                    'dropout': self.config['hopfield_dropout']
+                    'dropout': self.config['hopfield_dropout'],
+                    'layer_norm': self.config['hopfield_layer_norm'],
+                    'skip': self.config['hopfield_skip']
                 },
                 'main_cls': {
                     'hidden_dim': self.config['cls_hidden_dim'],
-                    'layers': self.config['cls_layers']
+                    'layers': self.config['cls_layers'],
+                    'noise': not self.config['standardize_molecule']
                 }
             }
-            memory = self.train_set if hyper_args['hopfield']['context_module'] else None
+            memory = self.context if hyper_args['hopfield']['context_module'] else None
             self.model = HyperPCM(
                 molecule_encoder=self.config['molecule_encoder'],
                 protein_encoder=self.config['protein_encoder'],
@@ -196,22 +228,23 @@ class ChEMBLPredictor:
                 memory=memory
             ).to(self.device)
         else:
+            assert not self.config['standardize_molecule'] and not self.config['standardize_protein'], \
+                'Warning: Inputs should not be standardized for the original DeepPCM model.'
+
             args = {
                 'architecture': self.config['architecture'],
                 'molecule_context': self.config['molecule_context'],
                 'protein_context': self.config['protein_context'],
-            }
-            if self.config['molecule_context'] or self.config['protein_context']:
-                args['hopfield'] = {
+                'hopfield': {
                     'QK_dim': self.config['hopfield_QK_dim'],
                     'heads': self.config['hopfield_heads'],
                     'beta': self.config['hopfield_beta'],
-                    'dropout': self.config['hopfield_dropout']
+                    'dropout': self.config['hopfield_dropout'],
+                    'layer_norm': self.config['hopfield_layer_norm'],
+                    'skip': self.config['hopfield_skip'] if self.config['remove_batch'] else False
                 }
-                memory = self.train_set
-            else:
-                memory = None
-
+            }
+            memory = self.context if 'Context' in self.config['architecture'] else None
             self.model = DeepPCM(
                 args=args,
                 molecule_encoder=self.config['molecule_encoder'],
@@ -235,11 +268,11 @@ class ChEMBLPredictor:
             for batch, labels in tqdm(self.dataloaders[split], desc=f'    {split}: ', colour='white'):
                 pids, proteins, mids, molecules = batch['pids'], batch['proteins'], batch['mids'], batch['molecules']
                 count += labels.shape[0]
-                log_dict['MID'].append(mids.cpu().numpy())
-                log_dict['PID'].append(pids.cpu().numpy())
+                log_dict['MID'].append(mids)
+                log_dict['PID'].append(pids)
                 log_dict['Label'].append(labels.cpu().numpy())
                 if self.config['loss_function'] in constants.LOSS_CLASS['classification']:
-                    labels = (labels > constants.BIOACTIVITY_THRESHOLD)
+                    labels = (labels > constants.BIOACTIVITY_THRESHOLD[self.config['dataset']])
                 labels = labels.float().to(self.device)
                 logits = self.model(batch)
 
@@ -255,14 +288,27 @@ class ChEMBLPredictor:
                 labels = labels.cpu().numpy()
                 log_dict['Prediction'].append(logits.detach().cpu().numpy())
                 if self.config['loss_function'] in constants.LOSS_CLASS['regression']:
-                    labels = (labels > constants.BIOACTIVITY_THRESHOLD).astype(float)
-                    logits -= constants.BIOACTIVITY_THRESHOLD
+                    if self.config['raw_reg_labels']:
+                        labels = (labels > constants.BIOACTIVITY_THRESHOLD[self.config['dataset']]).astype(float)
+                        logits -= constants.BIOACTIVITY_THRESHOLD[self.config['dataset']]
+                    else:
+                        labels = (labels > 0).astype(float)
                 labels_true.append(labels)
                 labels_prob.append(torch.sigmoid(logits).detach().cpu().numpy())
 
         if full_log:
             for key, values in log_dict.items():
-                log_dict[key] = np.concatenate(values)
+                if 'ID' in key:
+                    tmp_list = []
+                    for id_batch in log_dict[key]:
+                        for id_list in id_batch:
+                            for id in id_list:
+                                tmp_list.append(id)
+                    log_dict[key] = np.array(tmp_list)
+                else:
+                    log_dict[key] = np.concatenate(values)
+                if key == 'PID':
+                    log_dict[key] = log_dict['PID'].flatten()
             log_df = pd.DataFrame(log_dict)
             log_df.to_csv(f'checkpoints/{self.config["name"]}/{split}_labels.csv', index=False)
 
@@ -274,7 +320,14 @@ class ChEMBLPredictor:
         mcc_threshold = None
         labels_true = np.concatenate(labels_true)
         labels_prob = np.concatenate(labels_prob)
-        for metric, func in constants.METRICS.items():
+        if split == 'test' and self.config['loss_function'] in constants.LOSS_CLASS['regression']:
+            if not full_log:
+                log_dict['Label'] = np.concatenate(log_dict['Label'])
+                log_dict['Prediction'] = np.concatenate(log_dict['Prediction'])
+            for metric, func in constants.METRICS['regression'].items():
+                results[metric] = func(log_dict['Label'], log_dict['Prediction'])
+
+        for metric, func in constants.METRICS['classification'].items():
             if metric == 'MCC':
                 tau = None if opt else self.mcc_threshold
                 score, opt_tau = func(labels_true, labels_prob, threshold=tau)
@@ -301,7 +354,10 @@ class CrossValidator:
     def cross_validate(self, test_folds=None):
         test_folds = range(10) if test_folds is None else test_folds
         for i, fold in enumerate(test_folds):
-            self.config['folds'] = {'test': fold, 'valid': fold-1 if fold != 0 else 9}
+            self.config['folds'] = {
+                'test': fold,
+                'valid': fold - 1 if fold != 0 else constants.MAX_FOLDS[self.config['dataset']]
+            }
             self.config['name'] = f'{self.name}_test_fold_{fold}'
             self.config['seed'] = np.random.randint(1, 10000)
             tmp_result = self.parallel_training()
@@ -318,7 +374,7 @@ class CrossValidator:
                     self.results[split][metric].append(tmp_result[split][metric])
 
     def parallel_training(self):
-        trainer = ChEMBLPredictor(self.config, self.log)
+        trainer = DtiPredictor(self.config, self.log)
         if self.log:
             with trainer.wandb_run:
                 trainer.train()

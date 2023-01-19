@@ -3,7 +3,7 @@ import argparse
 import torch
 
 from settings.config import get_configs
-from trainer import ChEMBLPredictor, CrossValidator
+from trainer import DtiPredictor, CrossValidator
 
 
 if __name__ == "__main__":
@@ -16,12 +16,12 @@ if __name__ == "__main__":
     if config['test']:
         fold = int(config['checkpoint'].split('_')[-1])
         config['folds'] = {'test': fold, 'valid': fold - 1 if fold != 0 else 9}
-        trainer = ChEMBLPredictor(config, log=False)
+        trainer = DtiPredictor(config, log=False)
         results = trainer.eval(checkpoint_path=config['checkpoint'])
         print({'train': results['train'], 'valid': results['valid'], 'test': results['test']})
         print(f'Optimal MCC threshold: {trainer.mcc_threshold}')
     elif config['transfer']:
-        trainer = ChEMBLPredictor(config, log=False)
+        trainer = DtiPredictor(config, log=False)
         results = trainer.eval(checkpoint_path='checkpoints', metric=config['checkpoint_metric'])
         print({'train': results['train'], 'valid': results['valid'], 'test': results['test']})
         print(f'Optimal MCC threshold: {trainer.mcc_threshold}')
@@ -36,7 +36,7 @@ if __name__ == "__main__":
             cross_validator.cross_validate()
     else:
         print('Starting a single training and testing run.')
-        trainer = ChEMBLPredictor(config, log=log)
+        trainer = DtiPredictor(config, log=log)
         if log:
             with trainer.wandb_run:
                 trainer.train()
