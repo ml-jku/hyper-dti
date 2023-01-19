@@ -22,13 +22,15 @@ class ChEMBLData(Dataset):
     molecule_scaler = StandardScaler()
 
     def __init__(self, data_path, partition='train', splitting='temporal', folds=None, mode='pairs',
-                 protein_encoder='SeqVec', molecule_encoder='CDDD', standardize=False, subset=False):
+                 protein_encoder='SeqVec', molecule_encoder='CDDD', standardize=None, subset=False,
+                 label_shift=True, remove_batch=False, predefined_scaler=None):
         super(ChEMBLData, self).__init__()
         self.data_path = data_path
         self.partition = partition
         self.mode = mode
         self.subset = subset
         self.folds = folds if folds is not None else {'valid': 8, 'test': 9}
+        self.remove_batch = remove_batch
 
         data = self.read_in()
 
@@ -52,16 +54,27 @@ class ChEMBLData(Dataset):
         self.mids = list(data.MID.unique())
         self.triplets = data[["MID", "PID", "Bioactivity"]]
 
-        for unique_id in self.mids:
-            if unique_id not in ChEMBLData.molecule_embeddings.keys():
-                ChEMBLData.molecule_embeddings[unique_id] = molecule_embeddings[unique_id]
-        if not standardize:
+        # Normalize labels
+        if label_shift:
+            if self.partition == 'train':
+                ChEMBLData.label_std = np.std(self.triplets['Bioactivity'])
+            self.triplets['Bioactivity'] -= constants.BIOACTIVITY_THRESHOLD['Lenselink']
+            self.triplets['Bioactivity'] /= ChEMBLData.label_std
+
+        if standardize is not None and standardize['Molecule']:
+            self.standardize(unique_ids=self.mids, tmp_embeddings=molecule_embeddings,
+                             global_embeddings=ChEMBLData.molecule_embeddings, scaler=ChEMBLData.molecule_scaler)
+        else:
+            for unique_id in self.mids:
+                if unique_id not in ChEMBLData.molecule_embeddings.keys():
+                    ChEMBLData.molecule_embeddings[unique_id] = molecule_embeddings[unique_id]
+        if standardize is not None and standardize['Protein']:
+            self.standardize(unique_ids=self.pids, tmp_embeddings=protein_embeddings,
+                             global_embeddings=ChEMBLData.protein_embeddings, scaler=ChEMBLData.protein_scaler)
+        else:
             for unique_id in self.pids:
                 if unique_id not in ChEMBLData.protein_embeddings.keys():
                     ChEMBLData.protein_embeddings[unique_id] = protein_embeddings[unique_id]
-        else:
-            self.standardize(unique_ids=self.pids, tmp_embeddings=protein_embeddings,
-                             global_embeddings=ChEMBLData.protein_embeddings, scaler=ChEMBLData.protein_scaler)
 
         if constants.MAIN_BATCH_SIZE != -1 and partition == 'train':
             for i in range(len(self.pids)):
@@ -109,16 +122,18 @@ class ChEMBLData(Dataset):
     def get_protein_memory(self, exclude_pids):
         memory = []
         for pid in self.pids:
-            if pid not in exclude_pids:
-                memory.append(ChEMBLData.protein_embeddings[pid])
+            if self.remove_batch and pid in exclude_pids:
+                continue
+            memory.append(ChEMBLData.protein_embeddings[pid])
         return torch.tensor(np.array(memory), dtype=torch.float32)
 
     def get_molecule_memory(self, exclude_mids):
         memory = []
         mid_subset = random.choices(self.mids, k=10000)
         for mid in mid_subset:
-            if mid not in exclude_mids:
-                memory.append(ChEMBLData.molecule_embeddings[mid])
+            if self.remove_batch and mid in exclude_mids:
+                continue
+            memory.append(ChEMBLData.molecule_embeddings[mid])
         return torch.tensor(np.array(memory), dtype=torch.float32)
 
     def __len__(self):
