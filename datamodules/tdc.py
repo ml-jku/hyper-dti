@@ -23,7 +23,7 @@ class TdcData(Dataset):
 
     label_std = None
 
-    def __init__(self, data_path, partition='train', splitting='temporal', folds=None, debug=False, mode='pairs',
+    def __init__(self, data_path, partition='train', splitting='temporal', folds=None, mode='pairs',
                  protein_encoder='SeqVec', molecule_encoder='CDDD', standardize=False, label_shift=True,
                  subset=False, remove_batch=False, predefined_scaler=None):
         super().__init__()
