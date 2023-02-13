@@ -4,13 +4,13 @@
 [![Pytorch](https://img.shields.io/badge/PyTorch-1.9-red.svg)](https://pytorch.org/get-started/previous-versions/)
 ![Licence](https://img.shields.io/github/license/ml-jku/hyper-dti)
 
-A HyperNetwork approach to drug-target interaction prediction.
-
 **[Abstract](#abstract)**
 | **[Dependencies](#dependencies)**
 | **[Data](#data)**
 | **[Usage](#usage)**
 | **[Citation](#citation)**
+
+A HyperNetwork approach to drug-target interaction prediction. 
 
 ![plot](figures/hyper-dti.png)
 
@@ -80,7 +80,7 @@ $ python tabular_experiments.py --baseline RandomForest --dataset Lenselink --mo
 ```
 
 ## Citation
-```
+```bibtex
 @inproceedings{svensson2022robust,
     title={Robust task-specific adaption of drug-target interaction models},
     author={Svensson, Emma and Hoedt, Pieter-Jan and Hochreiter, Sepp and Klambauer, G\"{u}nter},
