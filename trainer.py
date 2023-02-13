@@ -17,6 +17,7 @@ from models.deep_pcm import DeepPCM
 from models.hyper_pcm import HyperPCM
 from datamodules.lenselink import ChEMBLData
 from datamodules.ozturk import MultiDtiData
+from datamodules.tdc import TdcData
 from utils.collate import get_collate
 from utils.setup import setup
 
@@ -69,7 +70,14 @@ class DtiPredictor:
         for split in ['train', 'valid', 'test']:
             label_shift = (self.config['loss_function'] in constants.LOSS_CLASS['regression'] and
                            not self.config['raw_reg_labels'])
-            datamodule = ChEMBLData if config['dataset'] == 'Lenselink' else MultiDtiData
+
+            if config['dataset'] == 'Lenselink':
+                datamodule = ChEMBLData
+            elif config['splitting'] == 'öztürk':
+                datamodule = MultiDtiData
+            else:
+                datamodule = TdcData
+
             dataset = datamodule(
                 partition=split, data_path=self.data_path, splitting=config['split'], folds=config['folds'],
                 mode=batching_mode, protein_encoder=config['protein_encoder'],

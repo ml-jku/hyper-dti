@@ -23,9 +23,9 @@ class TdcData(Dataset):
 
     label_std = None
 
-    def __init__(self, data_path, partition='train', splitting='temporal', folds=None, mode='pairs',
-                 protein_encoder='SeqVec', molecule_encoder='CDDD', standardize=False, label_shift=True,
-                 subset=False, remove_batch=False, predefined_scaler=None):
+    def __init__(self, data_path, partition='train', splitting='cold', folds=None, mode='pairs',
+                 protein_encoder='SeqVec', molecule_encoder='CDDD', standardize=None,
+                 label_shift=True, subset=False, remove_batch=False, predefined_scaler=None):
         super().__init__()
 
         self.data_path = data_path
@@ -33,8 +33,10 @@ class TdcData(Dataset):
         self.partition = partition
         self.mode = mode
         self.subset = subset
+        self.remove_batch = remove_batch
+        self.predefined_scaler = predefined_scaler
 
-        self.harmanize_mode = 'none'
+        self.harmonize_mode = 'none'
         self.splitting = splitting
 
         data = self.read_in()
@@ -66,18 +68,29 @@ class TdcData(Dataset):
         completeness = len(self.triplets) / (len(self.pids) * len(self.mids))
         print(f'Completeness of {partition} set of {splitting} split is: {completeness}')
 
-        for unique_id in self.mids:
-            if unique_id not in TdcData.molecule_embeddings.keys():
-                TdcData.molecule_embeddings[unique_id] = molecule_embeddings[unique_id]
-        if not standardize:
+        if predefined_scaler['Molecule'] is not None:
+            TdcData.molecule_scaler = predefined_scaler['Molecule']
+        if standardize is not None and standardize['Molecule']:
+            print('Standardizing molecule embeddings.')
+            self.standardize(unique_ids=self.mids, tmp_embeddings=molecule_embeddings,
+                             global_embeddings=TdcData.molecule_embeddings, scaler=TdcData.molecule_scaler,
+                             reinit=predefined_scaler['Molecule'] is None)
+        else:
+            for unique_id in self.mids:
+                if unique_id not in TdcData.molecule_embeddings.keys():
+                    TdcData.molecule_embeddings[unique_id] = molecule_embeddings[unique_id]
+
+        if predefined_scaler['Protein'] is not None:
+            TdcData.molecule_scaler = predefined_scaler['Protein']
+        if standardize is not None and standardize['Protein']:
+            print('Standardizing protein embeddings.')
+            self.standardize(unique_ids=self.pids, tmp_embeddings=protein_embeddings,
+                             global_embeddings=TdcData.protein_embeddings, scaler=TdcData.protein_scaler,
+                             reinit=predefined_scaler['Protein'] is None)
+        else:
             for unique_id in self.pids:
                 if unique_id not in TdcData.protein_embeddings.keys():
                     TdcData.protein_embeddings[unique_id] = protein_embeddings[unique_id]
-        else:
-            self.standardize(unique_ids=self.pids, tmp_embeddings=protein_embeddings,
-                             global_embeddings=TdcData.protein_embeddings, scaler=TdcData.protein_scaler)
-            # self.standardize(unique_ids=self.mids, tmp_embeddings=molecule_embeddings,
-            #                 global_embeddings=ChEMBLData.molecule_embeddings, scaler=ChEMBLData.molecule_scaler)
 
         if constants.MAIN_BATCH_SIZE != -1 and partition == 'train':
             for i in range(len(self.pids)):
@@ -125,16 +138,18 @@ class TdcData(Dataset):
     def get_protein_memory(self, exclude_pids):
         memory = []
         for pid in self.pids:
-            if pid not in exclude_pids:
-                memory.append(TdcData.protein_embeddings[pid])
+            if self.remove_batch and pid in exclude_pids:
+                continue
+            memory.append(TdcData.protein_embeddings[pid])
         return torch.tensor(np.array(memory), dtype=torch.float32)
 
     def get_molecule_memory(self, exclude_mids):
         memory = []
         mid_subset = random.choices(self.mids, k=10000)
         for mid in mid_subset:
-            if mid not in exclude_mids:
-                memory.append(TdcData.molecule_embeddings[mid])
+            if self.remove_batch and mid in exclude_mids:
+                continue
+            memory.append(TdcData.molecule_embeddings[mid])
         return torch.tensor(np.array(memory), dtype=torch.float32)
 
     def __len__(self):
@@ -148,15 +163,24 @@ class TdcData(Dataset):
     def read_in(self, partition='Full', splitting=None):
 
         data_cls = DTI(name=self.dataset, path=os.path.join(self.data_path, f'raw'))
-        if self.harmanize_mode != 'none':
-            data_cls.harmonize_affinities(self.harmanize_mode)
+        if self.harmonize_mode != 'none':
+            data_cls.harmonize_affinities(self.harmonize_mode)
 
         if self.dataset == 'Davis':
             data_cls.convert_to_log(form='binding')
 
         if partition != 'Full':
-            print('Temporarily splitting data randomly with built-in TDC split.')
-            data_cls = data_cls.get_split()
+            if splitting == 'random':
+                data_cls = data_cls.get_split()
+            elif splitting in ['leave-drug-out', 'ldo']:
+                data_cls = data_cls.get_split(method='cold_split', column_name='Drug')
+            elif splitting in ['leave-target-out', 'lto', 'lpo', 'leave-protein-out']:
+                data_cls = data_cls.get_split(method='cold_split', column_name='Target')
+            elif splitting in ['leave-drug-target-out', 'ldto', 'cold']:
+                data_cls = data_cls.get_split(method='cold_split', column_name=['Drug', 'Target'])
+            else:
+                assert splitting in ['random', 'cold_molecule', 'cold_protein', 'cold'], \
+                    f'Splitting {splitting} not supported for TDC datasets, choose between [random, cold_molecule, cold_protein, cold]'
             data = data_cls[partition]
         else:
             data = data_cls.get_data()
@@ -188,12 +212,12 @@ class TdcData(Dataset):
 
         return embeddings
 
-    def standardize(self, unique_ids, tmp_embeddings, global_embeddings, scaler):
+    def standardize(self, unique_ids, tmp_embeddings, global_embeddings, scaler, reinit=True):
         split_embeddings = []
         for unique_id in unique_ids:
             split_embeddings.append(tmp_embeddings[unique_id].tolist())
 
-        if self.partition == 'train':
+        if reinit and self.partition == 'train':
             assert len(split_embeddings) > 0, 'No training embeddings'
             scaler.fit(split_embeddings)
         if len(split_embeddings) > 0:

@@ -14,9 +14,10 @@ def get_configs(parser):
     parser.add_argument("--dataset", default='Lenselink', type=str, choices=['Lenselink', 'KIBA', 'Davis'])
     parser.add_argument("--subset", default=False, action='store_true', help='Take subset of full data for debugging.')
     parser.add_argument("--split", default='lpo', type=str, help='Splitting strategy.',
-                        choices=['random', 'temporal',
+                        choices=['random', 'temporal', 'öztürk',
                                  'leave-drug-out', 'ldo', 'leave-drug-cluster-out', 'ldco', 'lcco',
-                                 'leave-target-out', 'lto', 'lpo', 'leave-protein-out'])
+                                 'leave-target-out', 'lto', 'lpo', 'leave-protein-out',
+                                 'leave-drug-target-out', 'ldto', 'cold'])
     parser.add_argument("--test_fold", default=None, type=int, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                         help='Fixed fold to use for testing during cross-validation predefined benchmarks.')
     parser.add_argument("--standardize_protein", default=False, action='store_true')        # TODO integrate in trainer
