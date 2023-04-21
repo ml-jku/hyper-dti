@@ -1,9 +1,10 @@
+
 import sys
 import argparse
 import torch
 
-from settings.config import get_configs
-from trainer import DtiPredictor, CrossValidator
+from hyper_dti.settings.config import get_configs
+from hyper_dti.trainer import DtiPredictor, CrossValidator
 
 
 if __name__ == "__main__":
@@ -17,7 +18,7 @@ if __name__ == "__main__":
         fold = int(config['checkpoint'].split('_')[-1])
         config['folds'] = {'test': fold, 'valid': fold - 1 if fold != 0 else 9}
         trainer = DtiPredictor(config, log=False)
-        results = trainer.eval(checkpoint_path=config['checkpoint'])
+        results = trainer.eval(checkpoint_path=config['checkpoint'], metric=config['checkpoint_metric'])
         print({'train': results['train'], 'valid': results['valid'], 'test': results['test']})
         print(f'Optimal MCC threshold: {trainer.mcc_threshold}')
     elif config['transfer']:
@@ -40,7 +41,8 @@ if __name__ == "__main__":
         if log:
             with trainer.wandb_run:
                 trainer.train()
-                trainer.eval()
+                trainer.eval(metric=config['checkpoint_metric'])
         else:
             trainer.train()
-            trainer.eval()
+            trainer.eval(metric=config['checkpoint_metric'])
+

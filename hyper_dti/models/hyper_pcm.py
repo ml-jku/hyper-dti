@@ -1,27 +1,28 @@
+
 import torch
 import torch.nn as nn
 from collections import OrderedDict
 
-from settings import constants
-from models.noise import EncoderHead
-from models.context import ContextModule
-from models.mlp import Classifier
-from models.utils.initialization import get_initializer
+from hyper_dti.settings import constants
+from hyper_dti.models.noise import EncoderHead
+from hyper_dti.models.context import ContextModule
+from hyper_dti.models.mlp import Classifier
+from hyper_dti.models.utils.initialization import get_initializer
 
 
 class MainFCN(nn.Module):
     """
-    Main module for molecular inputs, predicting the drug-target interactions.
+    QSAR module for drug inputs, predicting the drug-target interactions.
     Author: Emma Svensson
     """
 
-    def __init__(self, molecule_encoder, cls_args):
+    def __init__(self, drug_encoder, cls_args):
         super(MainFCN, self).__init__()
 
         self.noise = cls_args['noise']
-        in_channels = constants.MOLECULE_LATENT_DIM[molecule_encoder]
+        in_channels = constants.DRUG_LATENT_DIM[drug_encoder]
         if self.noise:
-            self.molecule_encoder = EncoderHead(constants.MOLECULE_LATENT_DIM[molecule_encoder])
+            self.drug_encoder = EncoderHead(constants.DRUG_LATENT_DIM[drug_encoder])
             in_channels += 512
 
         hidden_layers = [in_channels]
@@ -31,28 +32,25 @@ class MainFCN(nn.Module):
 
     def forward(self, x):
         if self.noise:
-            x = self.molecule_encoder(x)
+            x = self.drug_encoder(x)
         x = self.classifier(x)
         return x.squeeze()
 
 
 class HyperFCN(nn.Module):
     """
-    HyperNetwork for protein inputs, predicting the parameters of the main network.
+    HyperNetwork for target inputs, predicting the parameters of the QSAR model.
     Author: Emma Svensson
     """
 
-    def __init__(self, protein_encoder, main_architecture, fcn_args, hopfield_args):
+    def __init__(self, target_encoder, main_architecture, fcn_args, hopfield_args):
         super(HyperFCN, self).__init__()
 
-        in_channels = constants.PROTEIN_LATENT_DIM[protein_encoder]
+        in_channels = constants.TARGET_LATENT_DIM[target_encoder]
 
         self.context = hopfield_args['context_module']
-        self.layerNorm = None
         if self.context:
-            self.protein_context = ContextModule(in_channels=in_channels, args=hopfield_args)
-            if hopfield_args['layer_norm']:
-                self.layerNorm = nn.LayerNorm(in_channels, elementwise_affine=False)
+            self.target_context = ContextModule(in_channels=in_channels, args=hopfield_args)
 
         hidden_layers = [in_channels]
         for _ in range(fcn_args['layers']):
@@ -113,7 +111,7 @@ class HyperFCN(nn.Module):
         batch_size = x.shape[0]
 
         if self.context:
-            x = self.protein_context(x, memory)
+            x = self.target_context(x, memory)
             if self.layerNorm:
                 x = self.layerNorm(x)
 
@@ -133,22 +131,23 @@ class HyperFCN(nn.Module):
 
 class HyperPCM(nn.Module):
     """
-    HyperPCM, full task-specific adaption of models for drug-target interaction prediction.
+    HyperPCM, full task-conditioned prediction of parameters for a QSAR models which in term
+    predicts drug-target interactions.
     Author: Emma Svensson
     """
 
-    def __init__(self, molecule_encoder, protein_encoder, args, memory=None):
+    def __init__(self, drug_encoder, target_encoder, args, memory=None):
         super(HyperPCM, self).__init__()
         assert not (args['hopfield']['context_module'] and memory is None), \
             'A context is required for the context module.'
         self.memory = memory
 
-        self.main = MainFCN(molecule_encoder, args['main_cls']).requires_grad_(False)
+        self.main = MainFCN(drug_encoder, args['main_cls']).requires_grad_(False)
         num_params = sum([param.nelement() for param in self.main.parameters()])
-        print(f'HyperNet needs to predict {num_params} number of parameters for the main network.')
+        print(f'HyperNet needs to predict {num_params} number of parameters for the QSAR model.')
 
         self.hyper = HyperFCN(
-            protein_encoder,
+            target_encoder,
             main_architecture=self.main.state_dict(),
             fcn_args=args['hyper_fcn'],
             hopfield_args=args['hopfield']
@@ -169,27 +168,27 @@ class HyperPCM(nn.Module):
 
     def forward(self, batch):
         device = next(self.hyper.parameters()).device
-        protein_batch = batch['proteins'].to(device)
+        target_batch = batch['targets'].to(device)
 
         if self.memory is not None:
-            memory = self.memory.get_protein_memory(exclude_pids=batch['pids']).to(device)
+            memory = self.memory.get_target_memory(exclude_pids=batch['pids']).to(device)
         else:
             memory = None
 
         # Hyper network parameter prediction
-        state_dicts = self.hyper(protein_batch, memory)
+        state_dicts = self.hyper(target_batch, memory)
 
         outputs = torch.Tensor([]).to(device)
-        # Run main sequentially
+        # Run QSAR models sequentially
         for i, state_dict in enumerate(state_dicts):
-            protein_output = self.forward_main(batch['molecules'][i].to(device), state_dict)
-            if len(batch['molecules'][i]) < 2:
-                protein_output = protein_output.unsqueeze(0)
-            outputs = torch.cat((outputs, protein_output), 0)
+            target_output = self.forward_main(batch['drugs'][i].to(device), state_dict)
+            if len(batch['drugs'][i]) < 2:
+                target_output = target_output.unsqueeze(0)
+            outputs = torch.cat((outputs, target_output), 0)
 
         return outputs  # , state_dicts
 
-    def forward_main(self, molecules, state_dict):
+    def forward_main(self, drugs, state_dict):
         pred_params = list(state_dict.items())
         l = 0
         for layer in self.main.modules():
@@ -198,5 +197,5 @@ class HyperPCM(nn.Module):
                     layer._parameters[param] = pred_params[l][1]
                     l += 1
 
-        return self.main(molecules)
+        return self.main(drugs)
 

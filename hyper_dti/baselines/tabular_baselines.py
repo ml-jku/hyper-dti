@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn import metrics
 
-from settings import constants
+from hyper_dti.settings import constants
 
 objectives = {
     'RandomForest': {
@@ -38,8 +38,8 @@ class TabBaselinePredictor:
 
         self.train_x, self.train_y, self.test_x, self.test_y = self.get_data(
             data_path=os.path.join(config['data_dir'], config['dataset']),
-            molecule_encoder=config['molecule_encoder'],
-            protein_encoder=config['protein_encoder'],
+            drug_encoder=config['drug_encoder'],
+            target_encoder=config['target_encoder'],
             split=config['split'],
             test_fold=config['test_fold']
         )
@@ -48,12 +48,12 @@ class TabBaselinePredictor:
 
         print(f"Train on {len(self.train_x)}, test on {len(self.test_x)}")
 
-    def get_data(self, data_path, molecule_encoder, protein_encoder, split, test_fold):
-        with open(os.path.join(data_path, f'processed/{molecule_encoder}_encoding.pickle'), 'rb') as handle:
-            molecule_embedding = pickle.load(handle)
+    def get_data(self, data_path, drug_encoder, target_encoder, split, test_fold):
+        with open(os.path.join(data_path, f'processed/{drug_encoder}_encoding.pickle'), 'rb') as handle:
+            drug_embedding = pickle.load(handle)
 
-        with open(os.path.join(data_path, f'processed/{protein_encoder}_encoding.pickle'), 'rb') as handle:
-            protein_embedding = pickle.load(handle)
+        with open(os.path.join(data_path, f'processed/{target_encoder}_encoding.pickle'), 'rb') as handle:
+            target_embedding = pickle.load(handle)
 
         if self.dataset == 'Lenselink':
             data = pd.read_pickle(os.path.join(data_path, f"processed/data.pickle"))
@@ -66,71 +66,49 @@ class TabBaselinePredictor:
                 train_set = data[data[split] != test_fold]
                 test_set = data[data[split] == test_fold]
             train_interactions = train_set[["MID", "PID"]]
-            train_y = train_set[["Bioactivity"]]
+            train_y = np.array(train_set[["Bioactivity"]])
             test_interactions = test_set[["MID", "PID"]]
-            test_y = test_set[["Bioactivity"]]
-        elif 'tdc' in self.dataset:     # Currently TDC versions of KIBA and Davis datasets not supported
-            dataset = self.dataset.split('/')[1]
+            test_y = np.array(test_set[["Bioactivity"]])
+        else:
+            dataset = self.dataset.split('/')[-1]
             from tdc.multi_pred import DTI
 
-            data = DTI(name=dataset, path=os.path.join(data_path, f'raw'))
+            data_cls = DTI(name=dataset, path=os.path.join(data_path, f'raw'))
             if dataset == 'Davis':
-                data.convert_to_log(form='binding')
-            data = data.get_split()
-            train_set = data['train'].rename(
-                columns={'Drug_ID': 'MID', 'Drug': 'Molecule', 'Target_ID': 'PID', 'Target': 'Protein',
+                data_cls.convert_to_log(form='binding')
+
+            if split == 'random':
+                data_cls = data_cls.get_split(seed=self.seed)
+            elif split == 'cold_drug':
+                data_cls = data_cls.get_split(method='cold_split', column_name='Drug', seed=self.seed)
+            elif split == 'cold_target':
+                data_cls = data_cls.get_split(method='cold_split', column_name='Target', seed=self.seed)
+            elif split == 'cold':
+                data_cls = data_cls.get_split(method='cold_split', column_name=['Drug', 'Target'], seed=self.seed)
+            else:
+                assert split in ['random', 'cold_drug', 'cold_target', 'cold'], \
+                    f'Splitting {split} not supported for TDC datasets, choose between ' \
+                    f'[random, cold_drug, cold_target, cold]'
+
+            train_set = data_cls['train'].rename(
+                columns={'Drug_ID': 'MID', 'Drug': 'Drug', 'Target_ID': 'PID', 'Target': 'Target',
                          'Y': 'Bioactivity'})
             train_interactions = train_set[['MID', 'PID']]
-            train_y = train_set[['Bioactivity']]
-            test_set = data['test'].rename(
+            train_y = np.array(train_set[['Bioactivity']])
+            test_set = data_cls['test'].rename(
                 columns={'Drug_ID': 'MID', 'Drug': 'Molecule', 'Target_ID': 'PID', 'Target': 'Protein',
                          'Y': 'Bioactivity'})
             test_interactions = test_set[['MID', 'PID']]
-            test_y = test_set[['Bioactivity']]
-        else:
-            molecules = json.load(open(os.path.join(data_path, "raw/ligands_can.txt")))
-            proteins = json.load(open(os.path.join(data_path, "raw/proteins.txt")))
-            mids = list(molecules.keys())
-            pids = list(proteins.keys())
-
-            label_mat = pickle.load(open(os.path.join(data_path, f'raw/Y'), 'rb'), encoding='latin1')
-            if self.dataset == 'Davis':
-                label_mat = -(np.log10(label_mat / (math.pow(10, 9))))
-
-            rows, cols = np.where(np.isnan(label_mat) == False)
-
-            folds = json.load(open(os.path.join(data_path, f'raw/train_fold_setting1.txt')))
-            train_fold = []
-            for i in range(5):
-                if i != test_fold:
-                    train_fold.extend(folds[i])
-            train_interactions = pd.DataFrame({}, columns=['MID', 'PID'])
-            train_y = []
-            for ind in train_fold:
-                train_interactions = pd.concat(
-                    [train_interactions, pd.DataFrame({'MID': mids[rows[ind]], 'PID': pids[cols[ind]]}, index=[0])],
-                    ignore_index=True
-                )
-                train_y.append(label_mat[rows[ind], cols[ind]])
-
-            test_fold = json.load(open(os.path.join(data_path, f'raw/test_fold_setting1.txt')))
-            test_interactions = pd.DataFrame({}, columns=['MID', 'PID'])
-            test_y = []
-            for ind in test_fold:
-                test_interactions = pd.concat(
-                    [test_interactions, pd.DataFrame({'MID': mids[rows[ind]], 'PID': pids[cols[ind]]}, index=[0])],
-                    ignore_index=True
-                )
-                test_y.append(label_mat[rows[ind], cols[ind]])
+            test_y = np.array(test_set[['Bioactivity']])[:, 0]
 
         train_x = []
         for x in train_interactions.iterrows():
-            train_x.append(np.concatenate((molecule_embedding[x[1]['MID']], protein_embedding[x[1]['PID']])))
+            train_x.append(np.concatenate((drug_embedding[x[1]['MID']], target_embedding[x[1]['PID']])))
         test_x = []
         for x in test_interactions.iterrows():
-            test_x.append(np.concatenate((molecule_embedding[x[1]['MID']], protein_embedding[x[1]['PID']])))
+            test_x.append(np.concatenate((drug_embedding[x[1]['MID']], target_embedding[x[1]['PID']])))
 
-        return train_x, np.array(train_y), test_x, np.array(test_y)
+        return train_x, train_y, test_x, test_y
 
     def get_model(self):
         if self.baseline == 'RandomForest':
@@ -154,6 +132,9 @@ class TabBaselinePredictor:
         if self.objective in constants.LOSS_CLASS['classification']:
             self.train_y = (self.train_y > constants.BIOACTIVITY_THRESHOLD[self.dataset])
             self.test_y = (self.test_y > constants.BIOACTIVITY_THRESHOLD[self.dataset])
+        else:
+            self.train_y -= constants.BIOACTIVITY_THRESHOLD[self.dataset]
+            self.test_y -= constants.BIOACTIVITY_THRESHOLD[self.dataset]
         self.model.fit(self.train_x, self.train_y)
         train_pred = self.model.predict(self.train_x)
         test_pred = self.model.predict(self.test_x)
@@ -162,10 +143,8 @@ class TabBaselinePredictor:
                 #train_score = score_func(self.train_y, train_pred)
                 test_score = score_func(self.test_y, test_pred)
                 score[metric] = {'train': -100, 'test': test_score}
-            self.train_y = (self.train_y > constants.BIOACTIVITY_THRESHOLD[self.dataset])
-            self.test_y = (self.test_y > constants.BIOACTIVITY_THRESHOLD[self.dataset])
-            train_pred -= constants.BIOACTIVITY_THRESHOLD[self.dataset]
-            test_pred -= constants.BIOACTIVITY_THRESHOLD[self.dataset]
+            self.train_y = (self.train_y > 0)
+            self.test_y = (self.test_y > 0)
             train_pred = sigmoid(train_pred.astype(float))
             test_pred = sigmoid(test_pred.astype(float))
 

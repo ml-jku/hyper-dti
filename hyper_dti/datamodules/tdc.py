@@ -9,22 +9,22 @@ from tdc.multi_pred import DTI
 import torch
 from torch.utils.data import Dataset
 
-from settings import constants
-from utils.bio_encoding import precompute_protein_embeddings, precompute_molecule_embeddings
+from hyper_dti.settings import constants
+from hyper_dti.utils.bio_encoding import precompute_target_embeddings, precompute_drug_embeddings
 
 
 class TdcData(Dataset):
 
-    protein_embeddings = {}
-    molecule_embeddings = {}
+    target_embeddings = {}
+    drug_embeddings = {}
 
-    protein_scaler = StandardScaler()
-    molecule_scaler = StandardScaler()
+    target_scaler = StandardScaler()
+    drug_scaler = StandardScaler()
 
     label_std = None
 
     def __init__(self, data_path, partition='train', splitting='cold', folds=None, mode='pairs',
-                 protein_encoder='SeqVec', molecule_encoder='CDDD', standardize=None,
+                 target_encoder='SeqVec', drug_encoder='CDDD', standardize=None,
                  label_shift=True, subset=False, remove_batch=False, predefined_scaler=None):
         super().__init__()
 
@@ -35,25 +35,28 @@ class TdcData(Dataset):
         self.subset = subset
         self.remove_batch = remove_batch
         self.predefined_scaler = predefined_scaler
+        self.seed = folds['test'] if folds is not None else 42
 
         self.harmonize_mode = 'none'
         self.splitting = splitting
 
-        data = self.read_in()
+        # Read full dataset for quick preparation of embeddings
+        full_data = self.read_in()
+        if mode == 'drug':
+            self.all_pids_dict = {pid: i for i, pid in enumerate(sorted(full_data.PID.unique()))}
+        target_embeddings = self.get_embeddings(
+            input_type='Target', encoder_name=target_encoder,
+            unique_ids=list(full_data.PID.unique()), structures=list(full_data.Target.unique())
+        )
+        drug_embeddings = self.get_embeddings(
+            input_type='Drug', encoder_name=drug_encoder,
+            unique_ids=list(full_data.MID.unique()), structures=list(full_data.Drug.unique())
+        )
 
-        if mode == 'molecule':
-            self.all_pids_dict = {pid: i for i, pid in enumerate(sorted(data.PID.unique()))}
-
-        protein_embeddings = self.get_embeddings(input_type='Protein', encoder_name=protein_encoder,
-                                                 unique_ids=list(data.PID.unique()),
-                                                 structures=list(data.Protein.unique()))
-        molecule_embeddings = self.get_embeddings(input_type='Molecule', encoder_name=molecule_encoder,
-                                                  unique_ids=list(data.MID.unique()),
-                                                  structures=list(data.Molecule.unique()))
-
+        # Reload only the current split of the data
         data = self.read_in(partition=partition, splitting=splitting)
 
-        # Unique protein IDs, held out if needed
+        # Unique target IDs, drug IDs, and labels
         self.pids = list(data.PID.unique())
         self.mids = list(data.MID.unique())
         self.triplets = data[["MID", "PID", "Bioactivity"]]
@@ -62,35 +65,34 @@ class TdcData(Dataset):
         if label_shift:
             if self.partition == 'train':
                 TdcData.label_std = np.std(self.triplets['Bioactivity'])
-            self.triplets['Bioactivity'] -= constants.BIOACTIVITY_THRESHOLD['ChEMBL']
-            self.triplets['Bioactivity'] /= TdcData.label_std
+            self.triplets['Bioactivity'] -= constants.BIOACTIVITY_THRESHOLD[self.dataset]
+            # self.triplets['Bioactivity'] /= TdcData.label_std
 
-        completeness = len(self.triplets) / (len(self.pids) * len(self.mids))
-        print(f'Completeness of {partition} set of {splitting} split is: {completeness}')
-
-        if predefined_scaler['Molecule'] is not None:
-            TdcData.molecule_scaler = predefined_scaler['Molecule']
-        if standardize is not None and standardize['Molecule']:
-            print('Standardizing molecule embeddings.')
-            self.standardize(unique_ids=self.mids, tmp_embeddings=molecule_embeddings,
-                             global_embeddings=TdcData.molecule_embeddings, scaler=TdcData.molecule_scaler,
-                             reinit=predefined_scaler['Molecule'] is None)
+        if predefined_scaler['Drug'] is not None:
+            TdcData.drug_scaler = predefined_scaler['Drug']
+        if standardize is not None and standardize['Drug']:
+            print('Standardizing drug embeddings.')
+            self.standardize(
+                unique_ids=self.mids, tmp_embeddings=drug_embeddings, reinit=predefined_scaler['Drug'] is None,
+                global_embeddings=TdcData.drug_embeddings, scaler=TdcData.drug_scaler
+            )
         else:
             for unique_id in self.mids:
-                if unique_id not in TdcData.molecule_embeddings.keys():
-                    TdcData.molecule_embeddings[unique_id] = molecule_embeddings[unique_id]
+                if unique_id not in TdcData.drug_embeddings.keys():
+                    TdcData.drug_embeddings[unique_id] = drug_embeddings[unique_id]
 
-        if predefined_scaler['Protein'] is not None:
-            TdcData.molecule_scaler = predefined_scaler['Protein']
-        if standardize is not None and standardize['Protein']:
-            print('Standardizing protein embeddings.')
-            self.standardize(unique_ids=self.pids, tmp_embeddings=protein_embeddings,
-                             global_embeddings=TdcData.protein_embeddings, scaler=TdcData.protein_scaler,
-                             reinit=predefined_scaler['Protein'] is None)
+        if predefined_scaler['Target'] is not None:
+            TdcData.drug_scaler = predefined_scaler['Target']
+        if standardize is not None and standardize['Target']:
+            print('Standardizing target embeddings.')
+            self.standardize(
+                unique_ids=self.pids, tmp_embeddings=target_embeddings, reinit=predefined_scaler['Target'] is None,
+                global_embeddings=TdcData.target_embeddings, scaler=TdcData.target_scaler
+            )
         else:
             for unique_id in self.pids:
-                if unique_id not in TdcData.protein_embeddings.keys():
-                    TdcData.protein_embeddings[unique_id] = protein_embeddings[unique_id]
+                if unique_id not in TdcData.target_embeddings.keys():
+                    TdcData.target_embeddings[unique_id] = target_embeddings[unique_id]
 
         if constants.MAIN_BATCH_SIZE != -1 and partition == 'train':
             for i in range(len(self.pids)):
@@ -99,63 +101,63 @@ class TdcData(Dataset):
                 self.pids.extend([pid for _ in range(oversample_factor)])
 
     def __getitem__(self, item):
-        if self.mode == 'protein':
+        if self.mode == 'target':
             pid = self.pids[item]
-            molecule_batch = self.triplets[self.triplets.PID == pid]
+            drug_batch = self.triplets[self.triplets.PID == pid]
             return {
                 'pid': pid,
-                'protein': TdcData.protein_embeddings[pid],
-                'mid': molecule_batch["MID"].tolist(),
-                'molecule': [TdcData.molecule_embeddings[mol] for mol in molecule_batch["MID"]],
-                'label': molecule_batch['Bioactivity'].tolist()
+                'target': TdcData.target_embeddings[pid],
+                'mid': drug_batch["MID"].tolist(),
+                'drug': [TdcData.drug_embeddings[mol] for mol in drug_batch["MID"]],
+                'label': drug_batch['Bioactivity'].tolist()
             }
-        elif self.mode == 'molecule':
+        elif self.mode == 'drug':
             mid = self.mids[item]
-            molecule_batch = self.triplets[self.triplets.MID == mid]
+            drug_batch = self.triplets[self.triplets.MID == mid]
             labels = np.full([constants.NUM_TASKS], np.nan)
-            for pid in molecule_batch['PID']:
-                tmp_label = molecule_batch.loc[molecule_batch.PID == pid, 'Bioactivity']
+            for pid in drug_batch['PID']:
+                tmp_label = drug_batch.loc[drug_batch.PID == pid, 'Bioactivity']
                 if len(tmp_label) > 1:
                     tmp_label = np.mean(tmp_label)
                 labels[self.all_pids_dict[pid]] = tmp_label
             return {
-                'pid': molecule_batch["PID"].tolist(),
-                'protein': [TdcData.protein_embeddings[prot] for prot in molecule_batch["PID"]],
+                'pid': drug_batch["PID"].tolist(),
+                'target': [TdcData.target_embeddings[prot] for prot in drug_batch["PID"]],
                 'mid': mid,
-                'molecule': TdcData.molecule_embeddings[mid],
+                'drug': TdcData.drug_embeddings[mid],
                 'label': labels
             }
         else:
             batch = self.triplets.iloc[item]
             return {
                 'pid': batch['PID'],
-                'protein': TdcData.protein_embeddings[batch['PID']],
+                'target': TdcData.target_embeddings[batch['PID']],
                 'mid': batch['MID'],
-                'molecule': TdcData.molecule_embeddings[batch["MID"]],
+                'drug': TdcData.drug_embeddings[batch["MID"]],
                 'label': batch['Bioactivity']
             }
 
-    def get_protein_memory(self, exclude_pids):
+    def get_target_memory(self, exclude_pids):
         memory = []
         for pid in self.pids:
             if self.remove_batch and pid in exclude_pids:
                 continue
-            memory.append(TdcData.protein_embeddings[pid])
+            memory.append(TdcData.target_embeddings[pid])
         return torch.tensor(np.array(memory), dtype=torch.float32)
 
-    def get_molecule_memory(self, exclude_mids):
+    def get_drug_memory(self, exclude_mids):
         memory = []
         mid_subset = random.choices(self.mids, k=10000)
         for mid in mid_subset:
             if self.remove_batch and mid in exclude_mids:
                 continue
-            memory.append(TdcData.molecule_embeddings[mid])
+            memory.append(TdcData.drug_embeddings[mid])
         return torch.tensor(np.array(memory), dtype=torch.float32)
 
     def __len__(self):
-        if self.mode == 'protein':
+        if self.mode == 'target':
             return len(self.pids)
-        elif self.mode == 'molecule':
+        elif self.mode == 'drug':
             return len(self.mids)
         else:
             return len(self.triplets)
@@ -172,21 +174,21 @@ class TdcData(Dataset):
         if partition != 'Full':
             if splitting == 'random':
                 data_cls = data_cls.get_split()
-            elif splitting in ['leave-drug-out', 'ldo']:
+            elif splitting in ['leave-drug-out', 'ldo', 'cold_drug', 'cold_molecule']:
                 data_cls = data_cls.get_split(method='cold_split', column_name='Drug')
-            elif splitting in ['leave-target-out', 'lto', 'lpo', 'leave-protein-out']:
+            elif splitting in ['leave-target-out', 'lto', 'lpo', 'leave-protein-out', 'cold_target', 'cold_protein']:
                 data_cls = data_cls.get_split(method='cold_split', column_name='Target')
             elif splitting in ['leave-drug-target-out', 'ldto', 'cold']:
                 data_cls = data_cls.get_split(method='cold_split', column_name=['Drug', 'Target'])
             else:
-                assert splitting in ['random', 'cold_molecule', 'cold_protein', 'cold'], \
-                    f'Splitting {splitting} not supported for TDC datasets, choose between [random, cold_molecule, cold_protein, cold]'
+                assert splitting in ['random', 'cold_drug', 'cold_target', 'cold'], \
+                    f'Splitting {splitting} not supported for TDC datasets, choose between [random, cold_drug, cold_target, cold]'
             data = data_cls[partition]
         else:
             data = data_cls.get_data()
 
-        data = data.rename(columns={'Drug_ID': 'MID', 'Drug': 'Molecule',
-                                    'Target_ID': 'PID', 'Target': 'Protein',
+        data = data.rename(columns={'Drug_ID': 'MID', 'Drug': 'Drug',
+                                    'Target_ID': 'PID', 'Target': 'Target',
                                     'Y': 'Bioactivity'})
 
         return data.head(10000) if self.subset else data
@@ -196,7 +198,7 @@ class TdcData(Dataset):
         prepared_embedding_path = os.path.join(self.data_path, f'processed/{encoder_name}_encoding.pickle')
         if not os.path.exists(prepared_embedding_path):
 
-            encoding_fn = precompute_protein_embeddings if input_type == 'Protein' else precompute_molecule_embeddings
+            encoding_fn = precompute_target_embeddings if input_type == 'Target' else precompute_drug_embeddings
             embeddings = encoding_fn(structures, encoder_name=encoder_name, batch_size=16)
 
             embedding_dict = {}

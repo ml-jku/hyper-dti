@@ -1,25 +1,27 @@
+
+import os
 import gc
 import sys
 import torch
 import numpy as np
 from tqdm import tqdm
 from itertools import tee
-from typing import Any, Dict, Union, Callable, List, Generator, Optional, Iterable
+from typing import Any, Dict, List, Generator, Iterable
 from concurrent.futures import ThreadPoolExecutor
 
 
-def encode_molecule(batch, encoder, name):
-    """ Wraps encoding of drug compounds, i.e. molecules, from different encoders. """
+def encode_drug(batch, encoder, name):
+    """ Wraps encoding of drug compounds, i.e. drugs, from different encoders. """
     embeddings = encoder(batch)
     return embeddings if name == 'CDDD' else embeddings[0]
 
 
-def encode_protein(batch, encoder):
-    """ Wraps encoding of targets, i.e. proteins, from different encoders. """
+def encode_target(batch, encoder):
+    """ Wraps encoding of protein targets, i.e. targets, from different encoders. """
     full_embeddings = encoder.embed_batch(batch)
     embeddings = np.array([])
     for emb in full_embeddings:
-        emb = encoder.reduce_per_protein(emb)
+        emb = encoder.reduce_per_target(emb)
         emb = np.expand_dims(emb, axis=0)
         embeddings = emb if len(embeddings) == 0 else np.append(embeddings, emb, axis=0)
     return embeddings
@@ -40,7 +42,7 @@ class UniRepEmbedder:
         return h
 
     @staticmethod
-    def reduce_per_protein(embedding):
+    def reduce_per_target(embedding):
         return embedding.mean(axis=0)
 
 
@@ -88,8 +90,8 @@ class ESM2Embedder:
         """
         data = []
         pos = 0
-        protein_ind = []
-        for protein, sequence in enumerate(batch):
+        target_ind = []
+        for target, sequence in enumerate(batch):
             sequence_batch = []
             for i in range(len(sequence) // 1022 + 1): 
                 sequence_batch.append(sequence[i * 1022, min(len(sequence), (i+1) * 1022)])
@@ -97,7 +99,7 @@ class ESM2Embedder:
             for s in sequence_batch:
                 data.append((str(pos), s))
                 pos += 1
-                protein_ind.append(protein)
+                target_ind.append(target)
         """
 
         batch_labels, batch_strs, batch_tokens = self._batch_converter(data)
@@ -122,21 +124,27 @@ class ESM2Embedder:
             )
 
     @staticmethod
-    def reduce_per_protein(embedding: np.ndarray) -> np.ndarray:
+    def reduce_per_target(embedding: np.ndarray) -> np.ndarray:
         return embedding.mean(0)
 
 
-def precompute_molecule_embeddings(molecules, encoder_name, split, batch_size):
+def precompute_drug_embeddings(drugs, encoder_name, split, batch_size):
     gc.collect()
 
     if encoder_name == 'CDDD':          # Server conda env cddd not work on server
         from cddd.inference import InferenceModel
         CDDD_MODEL_DIR = 'checkpoints/CDDD/default_model'
+        assert os.path.exists(CDDD_MODEL_DIR), \
+            'Error: default model should be downloaded according to CDDD github.' \
+            'Place the default_model folder under checkpoints/CDDD/'
         cddd_model = InferenceModel(CDDD_MODEL_DIR)
         mol_encoder = cddd_model.seq_to_emb
     elif encoder_name == 'MolBert':     # Server conda env molbert
         from molbert.utils.featurizer.molbert_featurizer import MolBertFeaturizer
         MOLBERT_MODEL_DIR = 'checkpoints/MolBert/molbert_100epochs/checkpoints/last.ckpt'
+        assert os.path.exists(MOLBERT_MODEL_DIR), \
+            'Error: checkpoint should be downloaded according to CDDD github.' \
+            'Place the file last.ckpt under checkpoints/MolBert/molbert_100epochs/checkpoints/last.ckpt'
         molbert_model = MolBertFeaturizer(MOLBERT_MODEL_DIR, max_seq_len=500, embedding_type='average-1-cat-pooled')
         mol_encoder = molbert_model.transform
     elif encoder_name == 'ECFP':         # Server conda env molbert
@@ -148,21 +156,21 @@ def precompute_molecule_embeddings(molecules, encoder_name, split, batch_size):
         rdkit_norm_model = PhysChemFeaturizer(normalise=True)
         mol_encoder = rdkit_norm_model.transform
     else:
-        print(f'Protein encoder {encoder_name} currently not supported.')
+        print(f'Target encoder {encoder_name} currently not supported.')
         sys.exit()
 
     embeddings = np.array([])
     with ThreadPoolExecutor(max_workers=8) as executor:
-        desc = f'Pre-computing molecule encodings with {encoder_name} for {split}: '
-        batches = (molecules[i:i + batch_size] for i in range(0, len(molecules), batch_size))
-        threads = [executor.submit(encode_molecule, batch, mol_encoder, encoder_name) for batch in batches]
+        desc = f'Pre-computing drug encodings with {encoder_name} for {split}: '
+        batches = (drugs[i:i + batch_size] for i in range(0, len(drugs), batch_size))
+        threads = [executor.submit(encode_drug, batch, mol_encoder, encoder_name) for batch in batches]
         for t in tqdm(threads, desc=desc, colour='white'):
             emb = t.result()
             embeddings = emb if len(embeddings) == 0 else np.append(embeddings, emb, axis=0)
     return embeddings
 
 
-def precompute_protein_embeddings(proteins, encoder_name, batch_size, n_jobs=8):
+def precompute_target_embeddings(targets, encoder_name, batch_size, n_jobs=8):
     gc.collect()
 
     if encoder_name == 'ProtBert':  # Server Conda env bio_embeddings
@@ -182,25 +190,25 @@ def precompute_protein_embeddings(proteins, encoder_name, batch_size, n_jobs=8):
         from bio_embeddings.embed import ESM1bEmbedder
         bio_encoder = ESM1bEmbedder()
     else:
-        print(f'Protein encoder {encoder_name} currently not supported.')
+        print(f'Target encoder {encoder_name} currently not supported.')
         sys.exit()
 
     embeddings = np.array([])
 
-    desc = f'Pre-computing protein encodings with {encoder_name}: '
-    batches = (proteins[i:i + batch_size] for i in range(0, len(proteins), batch_size))
+    desc = f'Pre-computing target encodings with {encoder_name}: '
+    batches = (targets[i:i + batch_size] for i in range(0, len(targets), batch_size))
     if n_jobs > 0:
         assert n_jobs < 9, f'{n_jobs} are too many workers for parallel computing.'
         with ThreadPoolExecutor(max_workers=n_jobs) as executor:
             if encoder_name == 'UniRep':
                 threads = [executor.submit(bio_encoder.embed_batch, batch) for batch in batches]
             else:
-                threads = [executor.submit(encode_protein, batch, bio_encoder) for batch in batches]
+                threads = [executor.submit(encode_target, batch, bio_encoder) for batch in batches]
             for t in tqdm(threads, desc=desc, colour='white'):
                 emb = t.result()
                 embeddings = emb if len(embeddings) == 0 else np.append(embeddings, emb, axis=0)
     else:
-        results = [encode_protein(batch, bio_encoder) for batch in batches]
+        results = [encode_target(batch, bio_encoder) for batch in batches]
         for emb in tqdm(results, desc=desc, colour='white'):
             embeddings = emb if len(embeddings) == 0 else np.append(embeddings, emb, axis=0)
 

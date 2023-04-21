@@ -1,7 +1,6 @@
 
 import gc
 import os
-import sys
 import wandb
 import numpy as np
 import pandas as pd
@@ -12,14 +11,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from settings import constants
-from models.deep_pcm import DeepPCM
-from models.hyper_pcm import HyperPCM
-from datamodules.lenselink import ChEMBLData
-from datamodules.ozturk import MultiDtiData
-from datamodules.tdc import TdcData
-from utils.collate import get_collate
-from utils.setup import setup
+from hyper_dti.settings import constants
+from hyper_dti.models.deep_pcm import DeepPCM
+from hyper_dti.models.hyper_pcm import HyperPCM
+from hyper_dti.datamodules.lenselink import ChEMBLData
+from hyper_dti.datamodules.tdc import TdcData
+from hyper_dti.utils.collate import get_collate
+from hyper_dti.utils.setup import setup
 
 
 class DtiPredictor:
@@ -47,48 +45,43 @@ class DtiPredictor:
         if config['architecture'] == 'HyperPCM':
             constants.OVERSAMPLING = config['oversampling']
             constants.MAIN_BATCH_SIZE = config['main_batch_size']
-
-        batching_mode = 'protein' if config['architecture'] == 'HyperPCM' else 'pairs'
-        self.dataloaders = {}
         if config['subset']:
             print('NOTE: currently running on a small subset of the data, only meant for dev and debugging!')
 
-        standard_scaler = {'Protein': None, 'Molecule': None}
+        standard_scaler = {'Target': None, 'Drug': None}
+        batching_mode = 'target' if config['architecture'] == 'HyperPCM' else 'pairs'
         self.transfer = config['transfer']
         if self.transfer:
             data_path = os.path.join(config['data_dir'], 'Lenselink')
             pretraining_set = ChEMBLData(
                 partition='train', data_path=data_path, splitting=config['split'], folds=config['folds'],
-                mode=batching_mode, protein_encoder=config['protein_encoder'],
-                molecule_encoder=config['molecule_encoder'], label_shift=False, subset=config['subset'],
-                standardize={'Protein': config['standardize_protein'], 'Molecule': config['standardize_molecule']},
+                mode=batching_mode, target_encoder=config['target_encoder'],
+                drug_encoder=config['drug_encoder'], label_shift=False, subset=config['subset'],
+                standardize={'Target': config['standardize_target'], 'Drug': config['standardize_drug']},
                 remove_batch=config['remove_batch'], predefined_scaler=standard_scaler
             )
-            standard_scaler = {'Protein': pretraining_set.protein_scaler, 'Molecule': pretraining_set.molecule_scaler}
+            standard_scaler = {'Target': pretraining_set.target_scaler, 'Drug': pretraining_set.drug_scaler}
             self.context = pretraining_set
 
+        self.dataloaders = {}
         for split in ['train', 'valid', 'test']:
             label_shift = (self.config['loss_function'] in constants.LOSS_CLASS['regression'] and
                            not self.config['raw_reg_labels'])
 
-            if config['dataset'] == 'Lenselink':
-                datamodule = ChEMBLData
-            elif config['splitting'] == 'öztürk':
-                datamodule = MultiDtiData
-            else:
-                datamodule = TdcData
-
+            datamodule = ChEMBLData if config['dataset'] == 'Lenselink' else TdcData
             dataset = datamodule(
                 partition=split, data_path=self.data_path, splitting=config['split'], folds=config['folds'],
-                mode=batching_mode, protein_encoder=config['protein_encoder'],
-                molecule_encoder=config['molecule_encoder'], label_shift=label_shift, subset=config['subset'],
-                standardize={'Protein': config['standardize_protein'], 'Molecule': config['standardize_molecule']},
+                mode=batching_mode, target_encoder=config['target_encoder'],
+                drug_encoder=config['drug_encoder'], label_shift=label_shift, subset=config['subset'],
+                standardize={'Target': config['standardize_target'], 'Drug': config['standardize_drug']},
                 remove_batch=config['remove_batch'], predefined_scaler=standard_scaler)
             if split == 'train' and not self.transfer:
                 self.context = dataset
             collate_fn = get_collate(mode=batching_mode, split=split)
-            self.dataloaders[split] = DataLoader(dataset, num_workers=4, batch_size=config['batch_size'],
-                                                 shuffle=(split == 'train'), collate_fn=collate_fn)
+            self.dataloaders[split] = DataLoader(
+                dataset, num_workers=config['num_workers'], batch_size=config['batch_size'],
+                shuffle=(split == 'train'), collate_fn=collate_fn
+            )
 
         self.model = None
         self.opt = None
@@ -100,7 +93,7 @@ class DtiPredictor:
         self.top_valid_results = {metric: -1 for metric in constants.METRICS['classification'].keys()}
         self.top_valid_results['Loss'] = np.infty
         for metric in constants.METRICS['regression'].keys():
-            self.top_valid_results[metric] = np.infty
+            self.top_valid_results[metric] = np.infty if metric in constants.LOSS_CLASS['regression'] else -1
         self.test_results = None
 
     def train(self):
@@ -122,6 +115,7 @@ class DtiPredictor:
             f'Error: Loss-function {self.config["loss_function"]} is not currently supported.'
         self.criterion = constants.LOSS_FUNCTION[self.config['loss_function']]()
 
+        epoch = 0
         steps_no_improvement = 0
         for epoch in range(self.config['epochs']):
             if self.config['patience'] != -1 and steps_no_improvement > self.config['patience']:
@@ -146,13 +140,17 @@ class DtiPredictor:
                     steps_no_improvement = 0
                 elif metric == 'Loss':
                     steps_no_improvement += 1
-                elif metric != 'MSE' and results['valid'][metric] >= self.top_valid_results[metric] or \
-                        metric == 'MSE' and results['valid'][metric] <= self.top_valid_results[metric]:
+                elif metric not in constants.LOSS_CLASS['regression'] and \
+                    results['valid'][metric] >= self.top_valid_results[metric] or \
+                        metric in constants.LOSS_CLASS['regression'] and \
+                            results['valid'][metric] <= self.top_valid_results[metric]:
                     if self.log:
                         wandb.run.summary[f'Best_{metric}'] = results['valid'][metric]
 
                     self.top_valid_results[metric] = results['valid'][metric]
-                    torch.save(self.model.state_dict(), f'checkpoints/{self.config["name"]}/models/model_{metric}.t7')
+                    if metric in ['AUC', 'MCC', 'CI']:
+                        torch.save(self.model.state_dict(),
+                                   f'checkpoints/{self.config["name"]}/models/model_{metric}.t7')
 
             if self.log:
                 log_dict = {}
@@ -207,56 +205,53 @@ class DtiPredictor:
                 'hyper_fcn': {
                     'hidden_dim': self.config['fcn_hidden_dim'],
                     'layers': self.config['fcn_layers'],
-                    'batch_norm': self.config['fcn_batch_norm'],
                     'selu': self.config['selu'],
                     'norm': self.config['norm'],
                     'init': self.config['init'],
-                    'standardize': self.config['standardize_protein']
+                    'standardize': self.config['standardize_target']
                 },
                 'hopfield': {
-                    'context_module': self.config['protein_context'],
+                    'context_module': self.config['target_context'],
                     'QK_dim': self.config['hopfield_QK_dim'],
                     'heads': self.config['hopfield_heads'],
                     'beta': self.config['hopfield_beta'],
                     'dropout': self.config['hopfield_dropout'],
-                    'layer_norm': self.config['hopfield_layer_norm'],
                     'skip': self.config['hopfield_skip']
                 },
                 'main_cls': {
                     'hidden_dim': self.config['cls_hidden_dim'],
                     'layers': self.config['cls_layers'],
-                    'noise': not self.config['standardize_molecule']
+                    'noise': not self.config['standardize_drug']
                 }
             }
             memory = self.context if hyper_args['hopfield']['context_module'] else None
             self.model = HyperPCM(
-                molecule_encoder=self.config['molecule_encoder'],
-                protein_encoder=self.config['protein_encoder'],
+                drug_encoder=self.config['drug_encoder'],
+                target_encoder=self.config['target_encoder'],
                 args=hyper_args,
                 memory=memory
             ).to(self.device)
         else:
-            assert not self.config['standardize_molecule'] and not self.config['standardize_protein'], \
+            assert not self.config['standardize_drug'] and not self.config['standardize_target'], \
                 'Warning: Inputs should not be standardized for the original DeepPCM model.'
 
             args = {
                 'architecture': self.config['architecture'],
-                'molecule_context': self.config['molecule_context'],
-                'protein_context': self.config['protein_context'],
+                'drug_context': self.config['drug_context'],
+                'target_context': self.config['target_context'],
                 'hopfield': {
                     'QK_dim': self.config['hopfield_QK_dim'],
                     'heads': self.config['hopfield_heads'],
                     'beta': self.config['hopfield_beta'],
                     'dropout': self.config['hopfield_dropout'],
-                    'layer_norm': self.config['hopfield_layer_norm'],
                     'skip': self.config['hopfield_skip'] if self.config['remove_batch'] else False
                 }
             }
             memory = self.context if 'Context' in self.config['architecture'] else None
             self.model = DeepPCM(
                 args=args,
-                molecule_encoder=self.config['molecule_encoder'],
-                protein_encoder=self.config['protein_encoder'],
+                drug_encoder=self.config['drug_encoder'],
+                target_encoder=self.config['target_encoder'],
                 memory=memory
             ).to(self.device)
 
@@ -274,7 +269,7 @@ class DtiPredictor:
         with torch.set_grad_enabled(split == 'train'):
 
             for batch, labels in tqdm(self.dataloaders[split], desc=f'    {split}: ', colour='white'):
-                pids, proteins, mids, molecules = batch['pids'], batch['proteins'], batch['mids'], batch['molecules']
+                pids, targets, mids, drugs = batch['pids'], batch['targets'], batch['mids'], batch['drugs']
                 count += labels.shape[0]
                 log_dict['MID'].append(mids)
                 log_dict['PID'].append(pids)
@@ -284,14 +279,13 @@ class DtiPredictor:
                 labels = labels.float().to(self.device)
                 logits = self.model(batch)
 
-                if split != 'test' and not opt:
-                    loss = self.criterion(logits, labels)
-                    if split == 'train':
-                        loss.backward()
-                        self.opt.step()
-                        self.opt.zero_grad()
+                loss = self.criterion(logits, labels)
+                if split == 'train':
+                    loss.backward()
+                    self.opt.step()
+                    self.opt.zero_grad()
 
-                    running_loss += loss.item() * labels.shape[0]
+                running_loss += loss.item() * labels.shape[0]
 
                 labels = labels.cpu().numpy()
                 log_dict['Prediction'].append(logits.detach().cpu().numpy())
@@ -321,19 +315,20 @@ class DtiPredictor:
             log_df.to_csv(f'checkpoints/{self.config["name"]}/{split}_labels.csv', index=False)
 
         # Summarize batch statistics
-        results = {}
-        if split != 'test' and not opt:
-            results['Loss'] = running_loss / count
+        results = {'Loss': running_loss / count}
 
         mcc_threshold = None
         labels_true = np.concatenate(labels_true)
         labels_prob = np.concatenate(labels_prob)
-        if split == 'test' and self.config['loss_function'] in constants.LOSS_CLASS['regression']:
+        if self.config['loss_function'] in constants.LOSS_CLASS['regression']:
             if not full_log:
                 log_dict['Label'] = np.concatenate(log_dict['Label'])
                 log_dict['Prediction'] = np.concatenate(log_dict['Prediction'])
             for metric, func in constants.METRICS['regression'].items():
-                results[metric] = func(log_dict['Label'], log_dict['Prediction'])
+                if split == 'train' and metric == 'CI':
+                    results[metric] = 0
+                else:
+                    results[metric] = func(log_dict['Label'], log_dict['Prediction'])
 
         for metric, func in constants.METRICS['classification'].items():
             if metric == 'MCC':
@@ -341,9 +336,11 @@ class DtiPredictor:
                 score, opt_tau = func(labels_true, labels_prob, threshold=tau)
                 if split == 'valid':
                     mcc_threshold = opt_tau
+                results[metric] = score
             else:
-                score = func(labels_true, labels_prob)
-            results[metric] = score
+                if sum(labels_true == 1) > 0 and sum(labels_true == 0) > 0:
+                    score = func(labels_true, labels_prob)
+                    results[metric] = score
 
         return results, mcc_threshold
 
@@ -386,10 +383,10 @@ class CrossValidator:
         if self.log:
             with trainer.wandb_run:
                 trainer.train()
-                trainer.eval()
+                trainer.eval(metric=self.config['checkpoint_metric'])
         else:
             trainer.train()
-            trainer.eval()
+            trainer.eval(metric=self.config['checkpoint_metric'])
         return {'valid': trainer.top_valid_results, 'test': trainer.test_results}
 
     def summarize(self):

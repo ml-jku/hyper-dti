@@ -1,3 +1,4 @@
+
 import warnings
 import numpy as np
 from sklearn.metrics import matthews_corrcoef
@@ -37,26 +38,31 @@ def mcc_score(y_true, y_prob, threshold: float):
     return score, best_threshold
 
 
-def ci_score(Y, P):
+def ci_score(y, f):
     """
-    Concordance Index from DeepDTA implementation.
-    Reference:
-    The original paper by Öztürk et al. (2018) is located at `<https://doi.org/10.1093/bioinformatics/bty593>`.
+    Concordance Index from GraphDTA implementation.
     """
-    summ = 0
-    pair = 0
-
-    for i in range(1, len(Y)):
-        for j in range(0, i):
-            if i is not j:
-                if (Y[i] > Y[j]):
-                    pair += 1
-                    summ += 1 * (P[i] > P[j]) + 0.5 * (P[i] == P[j])
-
-    if pair != 0:
-        return summ / pair
-    else:
-        return 0
+    ind = np.argsort(y)
+    y = y[ind]
+    f = f[ind]
+    i = len(y)-1
+    j = i-1
+    z = 0.0
+    S = 0.0
+    while i > 0:
+        while j >= 0:
+            if y[i] > y[j]:
+                z = z+1
+                u = f[i] - f[j]
+                if u > 0:
+                    S = S + 1
+                elif u == 0:
+                    S = S + 0.5
+            j = j - 1
+        i = i - 1
+        j = i-1
+    ci = S/z
+    return ci
 
 
 def r_squared_error(y_obs, y_pred):
