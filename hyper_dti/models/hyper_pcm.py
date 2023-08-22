@@ -112,8 +112,6 @@ class HyperFCN(nn.Module):
 
         if self.context:
             x = self.target_context(x, memory)
-            if self.layerNorm:
-                x = self.layerNorm(x)
 
         for layer in self.layers:
             x = layer(x)

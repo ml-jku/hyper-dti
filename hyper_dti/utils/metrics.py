@@ -125,3 +125,41 @@ def rm2_score(ys_orig, ys_line):
 
     return r2 * (1 - np.sqrt(np.absolute((r2*r2)-(r02*r02))))
 
+
+def re05_score(y_true, y_pred):
+    return getROCE(targetList=y_true, predList=y_pred, roceRate=0.5)
+
+
+def re1_score(y_true, y_pred):
+    return getROCE(targetList=y_true, predList=y_pred, roceRate=1)
+
+
+def re2_score(y_true, y_pred):
+    return getROCE(targetList=y_true, predList=y_pred, roceRate=2)
+
+
+def re5_score(y_true, y_pred):
+    return getROCE(targetList=y_true, predList=y_pred, roceRate=5)
+
+
+def getROCE(targetList, predList, roceRate):
+    """
+    ROC Enrichment metric from 3D-CNN implementation.
+    Reference:
+    The original paper by Ragoza et al. (2017) is located at `<https://doi.org/10.1021/acs.jcim.6b00740>`.
+    """
+    p = sum(targetList)
+    n = len(targetList) - p
+    predList = [[index,x] for index,x in enumerate(predList)]
+    predList = sorted(predList,key = lambda x:x[1],reverse = True)
+    tp1 = 0
+    fp1 = 0
+    for x in predList:
+        if(targetList[x[0]] == 1):
+            tp1 += 1
+        else:
+            fp1 += 1
+            if(fp1>((roceRate*n)/100)):
+                break
+    roce = (tp1*n)/(p*fp1)
+    return roce

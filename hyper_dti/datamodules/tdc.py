@@ -174,15 +174,15 @@ class TdcData(Dataset):
         if partition != 'Full':
             if splitting == 'random':
                 data_cls = data_cls.get_split()
-            elif splitting in ['leave-drug-out', 'ldo', 'cold_drug', 'cold_molecule']:
+            elif splitting in ['leave-drug-out', 'ldo', 'cold-drug', 'cold-molecule']:
                 data_cls = data_cls.get_split(method='cold_split', column_name='Drug')
-            elif splitting in ['leave-target-out', 'lto', 'lpo', 'leave-protein-out', 'cold_target', 'cold_protein']:
+            elif splitting in ['leave-target-out', 'lto', 'lpo', 'leave-protein-out', 'cold-target', 'cold-protein']:
                 data_cls = data_cls.get_split(method='cold_split', column_name='Target')
             elif splitting in ['leave-drug-target-out', 'ldto', 'cold']:
                 data_cls = data_cls.get_split(method='cold_split', column_name=['Drug', 'Target'])
             else:
-                assert splitting in ['random', 'cold_drug', 'cold_target', 'cold'], \
-                    f'Splitting {splitting} not supported for TDC datasets, choose between [random, cold_drug, cold_target, cold]'
+                assert splitting in ['random', 'cold-drug', 'cold-target', 'cold'], \
+                    f'Splitting {splitting} not supported for TDC datasets, choose between [random, cold-drug, cold-target, cold]'
             data = data_cls[partition]
         else:
             data = data_cls.get_data()

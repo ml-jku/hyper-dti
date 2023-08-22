@@ -130,6 +130,9 @@ class ChEMBLData(Dataset):
     def get_target_memory(self, exclude_pids):
         memory = []
         for pid in self.pids:
+            print(pid)
+            print(exclude_pids)
+            print(pid in exclude_pids)
             if self.remove_batch and pid in exclude_pids:
                 continue
             memory.append(ChEMBLData.target_embeddings[pid])

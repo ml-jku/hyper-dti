@@ -16,6 +16,7 @@ from hyper_dti.models.deep_pcm import DeepPCM
 from hyper_dti.models.hyper_pcm import HyperPCM
 from hyper_dti.datamodules.lenselink import ChEMBLData
 from hyper_dti.datamodules.tdc import TdcData
+from hyper_dti.datamodules.dude import DUDEData
 from hyper_dti.utils.collate import get_collate
 from hyper_dti.utils.setup import setup
 
@@ -68,7 +69,12 @@ class DtiPredictor:
             label_shift = (self.config['loss_function'] in constants.LOSS_CLASS['regression'] and
                            not self.config['raw_reg_labels'])
 
-            datamodule = ChEMBLData if config['dataset'] == 'Lenselink' else TdcData
+            if config['dataset'] == 'Lenselink':
+                datamodule = ChEMBLData
+            elif config['dataset'] == 'DUDE':
+                datamodule = DUDEData
+            else: 
+                datamodule = TdcData
             dataset = datamodule(
                 partition=split, data_path=self.data_path, splitting=config['split'], folds=config['folds'],
                 mode=batching_mode, target_encoder=config['target_encoder'],

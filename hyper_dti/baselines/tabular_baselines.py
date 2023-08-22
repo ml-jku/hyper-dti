@@ -79,16 +79,16 @@ class TabBaselinePredictor:
 
             if split == 'random':
                 data_cls = data_cls.get_split(seed=self.seed)
-            elif split == 'cold_drug':
+            elif split == 'cold-drug':
                 data_cls = data_cls.get_split(method='cold_split', column_name='Drug', seed=self.seed)
-            elif split == 'cold_target':
+            elif split == 'cold-target':
                 data_cls = data_cls.get_split(method='cold_split', column_name='Target', seed=self.seed)
             elif split == 'cold':
                 data_cls = data_cls.get_split(method='cold_split', column_name=['Drug', 'Target'], seed=self.seed)
             else:
-                assert split in ['random', 'cold_drug', 'cold_target', 'cold'], \
+                assert split in ['random', 'cold-drug', 'cold-target', 'cold'], \
                     f'Splitting {split} not supported for TDC datasets, choose between ' \
-                    f'[random, cold_drug, cold_target, cold]'
+                    f'[random, cold-drug, cold-target, cold]'
 
             train_set = data_cls['train'].rename(
                 columns={'Drug_ID': 'MID', 'Drug': 'Drug', 'Target_ID': 'PID', 'Target': 'Target',

@@ -10,7 +10,7 @@ if __name__ == "__main__":
                         choices=['HyperPCM', 'DeepPCM', 'RandomForest', 'XGBoost'])
     parser.add_argument("--name", default='benchmark_hyperpcm', type=str, help='Experiment name.')
     parser.add_argument("--wandb_username", default='none', type=str)
-    parser.add_argument("--dataset", default='Lenselink', type=str, choices=['Lenselink', 'Davis'])
+    parser.add_argument("--dataset", default='Lenselink', type=str, choices=['Lenselink', 'Davis', 'DUDE'])
     parser.add_argument("--split", default='lpo', type=str, help='Splitting strategy.',
                         choices=['random', 'temporal', 'leave-compound-cluster-out', 'lcco',
                                  'leave-protein-out', 'lpo', 'cold-drug', 'cold-target', 'cold'])
@@ -20,19 +20,19 @@ if __name__ == "__main__":
                         choices=['UniRep', 'SeqVec', 'ProtBert', 'ProtT5'])
     args = parser.parse_args()
 
-    if args['model'] == 'HyperPCM':
+    if args.model == 'HyperPCM':
         reproduce_hyperpcm(
-            dataset=args['dataset'], split=args['split'], drug_encoder=args['drug_encoder'],
-            target_encoder=args['target_encoder'], name=args['name'], wandb_username=args['wandb_username']
+            dataset=args.dataset, split=args.split, drug_encoder=args.drug_encoder,
+            target_encoder=args.target_encoder, name=args.name, wandb_username=args.wandb_username
         )
-    elif args['model'] == 'DeepPCM':
+    elif args.model == 'DeepPCM':
         reproduce_deeppcm(
-            dataset=args['dataset'], split=args['split'], drug_encoder=args['drug_encoder'],
-            target_encoder=args['target_encoder'], name=args['name'], wandb_username=args['wandb_username']
+            dataset=args.dataset, split=args.split, drug_encoder=args.drug_encoder,
+            target_encoder=args.target_encoder, name=args.name, wandb_username=args.wandb_username
         )
     else:
         reproduce_tabular(
-            baseline=args['model'], dataset=args['dataset'], split=args['split'], drug_encoder=args['drug_encoder'],
-            target_encoder=args['target_encoder'], name=args['name'], wandb_username=args['wandb_username']
+            baseline=args.model, dataset=args.dataset, split=args.split, drug_encoder=args.drug_encoder,
+            target_encoder=args.target_encoder, name=args.name, wandb_username=args.wandb_username
         )
 

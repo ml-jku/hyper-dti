@@ -12,7 +12,7 @@ def get_configs(parser):
     parser.add_argument("--seed", default=None, type=int)
 
     # Dataset
-    parser.add_argument("--dataset", default='Lenselink', type=str, choices=['Lenselink', 'KIBA', 'Davis'])
+    parser.add_argument("--dataset", default='Lenselink', type=str, choices=['Lenselink', 'KIBA', 'Davis', 'DUDE'])
     parser.add_argument("--subset", default=False, action='store_true',
                         help='Take subset of full data for debugging. Only for Lenselink dataset.')
     parser.add_argument("--split", default='lpo', type=str, help='Splitting strategy.',
@@ -59,7 +59,7 @@ def get_configs(parser):
     parser.add_argument("--num_workers", default=0, type=int)
 
     parser.add_argument("--architecture", default='HyperPCM', type=str, help='Model architecture.',
-                        choices=['DeepPCM', 'HyperPCM'])                                 # TODO add tabular baselines?
+                        choices=['DeepPCM', 'HyperPCM', 'RandomForest', 'XGBoost'])                     
     parser.add_argument("--init", default='pwi', type=str, help='How to initialize HyperNetwork parameters.',
                         choices=['default', 'manual', 'pwi', 'manual_pwi'])
     parser.add_argument("--norm", default=None, type=str, choices=['learned'],

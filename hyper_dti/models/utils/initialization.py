@@ -22,6 +22,7 @@ def get_initializer(non_linearity: str = "relu"):
         elif isinstance(m, nn.Sequential) or isinstance(m, nn.ModuleList) or isinstance(m, nn.ModuleDict):
             return
         elif sum(p.numel() for p in m.parameters()) > 0:
+            print(type(m))
             raise ValueError(f"no initialization for '{m.__class__.__name__}' module")
 
     return initializer

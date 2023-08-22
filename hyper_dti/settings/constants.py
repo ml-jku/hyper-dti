@@ -1,7 +1,8 @@
 
 import sklearn.metrics as metrics
 from torch.nn import BCEWithLogitsLoss, MSELoss, L1Loss
-from hyper_dti.utils.metrics import mcc_score, ci_score, rm2_score
+from hyper_dti.utils.metrics import mcc_score, ci_score, rm2_score, re05_score, re1_score, re2_score, re5_score
+
 
 
 METRICS = {
@@ -9,6 +10,10 @@ METRICS = {
         'AUC': metrics.roc_auc_score,
         'AUPRC': metrics.average_precision_score,
         'MCC': mcc_score,
+        '0.5% RE': re05_score,
+        '1% RE': re1_score,
+        '2% RE': re2_score,
+        '5% RE': re5_score
     },
     'regression': {
         'MSE': metrics.mean_squared_error,
@@ -21,7 +26,8 @@ METRICS = {
 MAX_FOLDS = {
     'Lenselink': 9,
     'KIBA': 4,
-    'Davis': 4
+    'Davis': 4,
+    'DUDE': 3
 }
 
 BIOACTIVITY_THRESHOLD = {
