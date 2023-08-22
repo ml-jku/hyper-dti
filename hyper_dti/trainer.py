@@ -280,7 +280,7 @@ class DtiPredictor:
                 log_dict['MID'].append(mids)
                 log_dict['PID'].append(pids)
                 log_dict['Label'].append(labels.cpu().numpy())
-                if self.config['loss_function'] in constants.LOSS_CLASS['classification']:
+                if self.config['loss_function'] in constants.LOSS_CLASS['classification'] and self.config['dataset'] != 'DUDE':
                     labels = (labels > constants.BIOACTIVITY_THRESHOLD[self.config['dataset']])
                 labels = labels.float().to(self.device)
                 logits = self.model(batch)
@@ -363,7 +363,12 @@ class CrossValidator:
         self.results = {'valid': {}, 'test': {}}
 
     def cross_validate(self, test_folds=None):
-        test_folds = range(10) if test_folds is None else test_folds
+        if test_folds is None:
+            if self.config['dataset'] == 'DUDE':
+                test_folds = range(1,4)
+            else: 
+                test_folds = range(constants.MAX_FOLDS[self.config['dataset']] + 1) 
+        
         for i, fold in enumerate(test_folds):
             self.config['folds'] = {
                 'test': fold,

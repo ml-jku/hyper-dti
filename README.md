@@ -94,7 +94,7 @@ $ python precompute_embeddings.py --dataset Lenselink --input_type Drug --encode
 
 ### Reproducibility
 Reproduce full benchmarking of either the HyperPCM, DeepPCM, XGBoost, or RandomForest model 
-for any pair of encoders in either of the settings of the three benchmarks Lenselink, Davis, or DUDE using
+for any pair of encoders in either of the four settings of the two benchmarks Lenselink or Davis using
 ```bash
 $ python reproduce_experiments.py --model HyperPCM --dataset Lenselink --split leave-protein-out --drug_encoder CDDD --target_encoder SeqVec
 ```

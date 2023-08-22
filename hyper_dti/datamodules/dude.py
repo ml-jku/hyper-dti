@@ -167,7 +167,6 @@ class DUDEData(Dataset):
 
     def get_embeddings(self, encoder_name):
 
-        print(os.path.join(self.data_path, f'processed/{encoder_name}_encoding.pickle'))
         assert os.path.exists(os.path.join(self.data_path, f'processed/{encoder_name}_encoding.pickle')), f'No processed embeddings found for {encoder_name}. Use precompute_embeddings.py script.'
 
         with open(os.path.join(self.data_path, f'processed/{encoder_name}_encoding.pickle'), 'rb') as handle:
@@ -190,3 +189,4 @@ class DUDEData(Dataset):
                     global_embeddings[unique_id] = emb
         else:
             print(f'No embeddings were scaled in {self.partition} split.')
+
