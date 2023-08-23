@@ -130,7 +130,11 @@ class ChEMBLData(Dataset):
     def get_target_memory(self, exclude_pids):
         memory = []
         for pid in self.pids:
-            if self.remove_batch and pid in np.array(exclude_pids)[:, 0]:
+            if len(np.array(exclude_pids).shape) > 1: 
+                exclude_pids = np.array(exclude_pids)[:, 0]
+            elif not isinstance(exclude_pids[0], np.int64):
+                exclude_pids = [batch[0] for batch in exclude_pids]
+            if self.remove_batch and pid in exclude_pids:
                 continue
             memory.append(ChEMBLData.target_embeddings[pid])
         return torch.tensor(np.array(memory), dtype=torch.float32)
