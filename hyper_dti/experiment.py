@@ -15,6 +15,8 @@ def reproduce_hyperpcm(dataset='Lenselink', split='lpo', drug_encoder='CDDD', ta
     """
     Function to reproduce experiments with HyperPCM model on given dataset and data split.
     """
+    loss_function = {'Lenselink': 'MAE', 'Davis': 'MSE', 'KIBA': 'MSE', 'DUDE': 'BCE'}
+    metric = {'Lenselink': 'MCC', 'Davis': 'MSE', 'KIBA': 'MSE', 'DUDE': 'AUC'}
     config = {
         'seed': np.random.randint(1, 10000),
         'name': f'{split}/{name}_{time.strftime("%H%M")}',
@@ -28,9 +30,9 @@ def reproduce_hyperpcm(dataset='Lenselink', split='lpo', drug_encoder='CDDD', ta
         'target_encoder': target_encoder,
         'standardize_drug': False,
         'standardize_target': True,
-        'loss_function': 'MAE' if dataset == 'Leneslink' else 'MSE',
+        'loss_function': loss_function[dataset],
         'raw_reg_labels': dataset != 'Davis',
-        'checkpoint_metric': 'MCC' if dataset == 'Lenselink' else 'MSE',
+        'checkpoint_metric': metric[dataset],
         'epochs': 1000,
         'patience': 100,
         'batch_size': 32,
@@ -42,7 +44,7 @@ def reproduce_hyperpcm(dataset='Lenselink', split='lpo', drug_encoder='CDDD', ta
         'lr_decay': 0.5,
         'weight_decay': 0.00005 if dataset == 'DUDE' else 0.00001,
         'momentum': 0.8,
-        'num_workers': 0,           # Should be 4 but currently not working
+        'num_workers': 4,      
         'architecture': 'HyperPCM',
         'drug_context': False,
         'target_context': True,
@@ -107,7 +109,7 @@ def reproduce_deeppcm(dataset='Leselink', split='lpo', drug_encoder='CDDD', targ
         'lr_decay': 0.5,
         'weight_decay': 0.00001,
         'momentum': 0.8,
-        'num_workers': 4,           # Should be 4 but currently not working
+        'num_workers': 4,    
         'architecture': 'DeepPCM',
         'drug_context': False,
         'target_context': False,
