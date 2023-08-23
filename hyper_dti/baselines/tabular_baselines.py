@@ -6,7 +6,6 @@ import math
 import pickle
 import numpy as np
 import pandas as pd
-from sklearn import metrics
 
 from hyper_dti.settings import constants
 
@@ -139,7 +138,7 @@ class TabBaselinePredictor:
         train_pred = self.model.predict(self.train_x)
         test_pred = self.model.predict(self.test_x)
         if self.objective in constants.LOSS_CLASS['regression']:
-            for metric, score_func in metrics['regression'].items():
+            for metric, score_func in constants.METRICS['regression'].items():
                 #train_score = score_func(self.train_y, train_pred)
                 test_score = score_func(self.test_y, test_pred)
                 score[metric] = {'train': -100, 'test': test_score}
@@ -148,7 +147,7 @@ class TabBaselinePredictor:
             train_pred = sigmoid(train_pred.astype(float))
             test_pred = sigmoid(test_pred.astype(float))
 
-        for metric, score_func in metrics['classification'].items():
+        for metric, score_func in constants.METRICS['classification'].items():
             if metric == 'MCC':
                 train_score, mcc_threshold = score_func(self.train_y, train_pred, threshold=None)
                 test_score, _ = score_func(self.test_y, test_pred, threshold=mcc_threshold)
