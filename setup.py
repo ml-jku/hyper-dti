@@ -13,10 +13,13 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type=r'text/markdown',
     packages=setuptools.find_packages(),
-    python_requires=r'>=3.8.0',
+    dependency_links = ['https://github.com/ml-jku/hopfield-layers']
+    python_requires=r'>=3.9.0',
     install_requires=[
-        r'torch>=1.5.0',
-        r'numpy>=1.20.0'
+        r'torch>=1.9.0',
+        r'scikit-learn>=1.2.2',
+        r'pytdc>=0.3.8',
+        r'hopfield-layers>=1.0.2'
     ],
     zip_safe=True
 )
