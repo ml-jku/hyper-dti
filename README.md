@@ -51,6 +51,7 @@ Tabular baseline XGBoost requires: xgboost
 The recommended way to install the software is to use `pip/pip3`:
 
 ```bash
+$ pip3 install git+https://github.com/ml-jku/hopfield-layers
 $ pip3 install git+https://github.com/ml-jku/hyper-dti
 ```
 
