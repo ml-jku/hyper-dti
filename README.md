@@ -5,6 +5,7 @@
 ![Licence](https://img.shields.io/github/license/ml-jku/hyper-dti)
 
 **[Dependencies](#dependencies)**
+| **[Installation](#installation)**
 | **[Data](#data)**
 | **[Encoders](#encoders)**
 | **[Usage](#usage)**
@@ -15,9 +16,7 @@
 Emma Svensson<sup>1, 2</sup>, Pieter-Jan Hoedt<sup>1</sup>, Sepp Hochreiter<sup>1, 3</sup>, Günter Klambauer<sup>1</sup>
 
 <sup>1</sup> ELLIS Unit Linz, Institute for Machine Learning, Johannes Kepler University Linz, 4040 Austria  
-
 <sup>2</sup> Molecular AI, Discovery Sciences, R&D, AstraZeneca, Gothenburg, 431 83 Sweden
-
 <sup>3</sup> Institute of Advanced Research in Artificial Intelligence (IARAI), Vienna, 1030 Austria
 
 A central problem in drug discovery is to identify the interactions between drug-like compounds and protein targets. Over the past decades, various quantitative structure-activity relationship (QSAR) and proteo-chemometric (PCM) approaches have been developed to model and predict these interactions. While QSAR approaches solely utilize representations of the drug compound, PCM methods incorporate both representations of the protein target and the drug compound, enabling them to achieve above-chance predictive accuracy on previously unseen protein targets. Both QSAR
@@ -46,6 +45,30 @@ Additional packages: sklearn, [modern-hopfield-layers](https://github.com/emmas9
 **Data preparation** and drug/target encoding require: rdkit, [bio-embeddings](https://github.com/sacdallago/bio_embeddings), [cddd](https://github.com/jrwnter/cddd.git), [molbert](https://github.com/BenevolentAI/MolBERT)
 
 Tabular baseline XGBoost requires: xgboost
+
+## Installation
+
+The recommended way to install the software is to use `pip/pip3`:
+
+```bash
+$ pip3 install git+https://github.com/ml-jku/hyper-dti
+```
+
+After installation, the HyperPCM model can be used by supplying the choise of drug_encoder (CDDD or MolBert) and target_encoder (SeqVec, UniRep, ProtBert, ProtT5, or ESM1b) as well as remaining arguments. If the context module should be used a memory, i.e. context, should also be provided.
+
+```python
+from hyper_dti.models.hyper_pcm import HyperPCM
+
+hyperpcm = HyperPCM(
+    drug_endorer='CDDD', 
+    target_encoder='SeqVec', 
+    args={
+        'hyper_fcn': ..., # HyperNetwork
+        'hopfield': ...,  # Context Module
+        'main_cls': ...   # QSAR Model
+    }
+)
+```
 
 ## Data
 Currently supported datasets are,
