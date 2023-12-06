@@ -19,7 +19,9 @@ setuptools.setup(
         r'torch>=1.9.0',
         r'scikit-learn>=1.2.2',
         r'pytdc>=0.3.8',
-        r'hopfield-layers>=1.0.2'
+        r'hopfield-layers>=1.0.2',
+        r'rdkit>=2023.03.1',
+        r'wandb>=0.15.4'
     ],
     zip_safe=True
 )
