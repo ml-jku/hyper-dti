@@ -16,7 +16,7 @@
 Emma Svensson<sup>1, 2</sup>, Pieter-Jan Hoedt<sup>1</sup>, Sepp Hochreiter<sup>1, 3</sup>, Günter Klambauer<sup>1</sup>
 
 <sup>1</sup> ELLIS Unit Linz, Institute for Machine Learning, Johannes Kepler University Linz, 4040 Austria  
-<sup>2</sup> Molecular AI, Discovery Sciences, R&D, AstraZeneca, Gothenburg, 431 83 Sweden
+<sup>2</sup> Molecular AI, Discovery Sciences, R&D, AstraZeneca, Gothenburg, 431 83 Sweden\
 <sup>3</sup> Institute of Advanced Research in Artificial Intelligence (IARAI), Vienna, 1030 Austria
 
 A central problem in drug discovery is to identify the interactions between drug-like compounds and protein targets. Over the past decades, various quantitative structure-activity relationship (QSAR) and proteo-chemometric (PCM) approaches have been developed to model and predict these interactions. While QSAR approaches solely utilize representations of the drug compound, PCM methods incorporate both representations of the protein target and the drug compound, enabling them to achieve above-chance predictive accuracy on previously unseen protein targets. Both QSAR
