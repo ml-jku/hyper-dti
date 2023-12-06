@@ -38,7 +38,7 @@ Main requirements are,
 - CUDA >= 11.1
 - PyTorch >= 1.9
 
-Additional packages: sklearn, [modern-hopfield-layers](https://github.com/emmas96/modern-hopfield-layers), PyTDC
+Additional packages: sklearn, [modern-hopfield-layers](https://github.com/ml-jku/hopfield-layers), PyTDC
 
 **Logging** is supported with: wandb
 

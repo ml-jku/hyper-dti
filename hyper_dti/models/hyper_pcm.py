@@ -134,8 +134,36 @@ class HyperPCM(nn.Module):
     Author: Emma Svensson
     """
 
-    def __init__(self, drug_encoder, target_encoder, args, memory=None):
+    def __init__(self, drug_encoder='CDDD', target_encoder='SeqVec', args=None, memory=None):
         super(HyperPCM, self).__init__()
+        
+        if args is None: 
+            args = {
+                'hyper_fcn': {
+                    'hidden_dim': 256,
+                    'layers': 1,
+                    'batch_norm': False,
+                    'selu': False,
+                    'norm': None,
+                    'init': 'pwi',
+                    'standardize': True
+                },
+                'hopfield': {
+                    'context_module': True,
+                    'QK_dim': 512,
+                    'heads': 8,
+                    'beta': 0.044194173824159216,
+                    'dropout': 0.5,
+                    'layer_norm': False,
+                    'skip': True
+                },
+                'main_cls': {
+                    'hidden_dim': 1024,
+                    'layers': 1,
+                    'noise': True
+                }
+            }
+        
         assert not (args['hopfield']['context_module'] and memory is None), \
             'A context is required for the context module.'
         self.memory = memory
