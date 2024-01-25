@@ -11,7 +11,7 @@
 | **[Usage](#usage)**
 | **[Citation](#citation)**
 
-### Robust task-conditioned modeling of drug-target interactions
+### Robust Task-Conditioned Modeling of Drug-Target Interactions
 
 Emma Svensson<sup>1, 2</sup>, Pieter-Jan Hoedt<sup>1</sup>, Sepp Hochreiter<sup>1, 3</sup>, Günter Klambauer<sup>1</sup>
 
@@ -23,9 +23,10 @@ A central problem in drug discovery is to identify the interactions between drug
 and PCM approaches have recently been improved by machine learning and deep neural networks, that allow the development of drug-target interaction prediction models from measurement data. However, deep neural networks typically require large amounts of
 training data and cannot robustly adapt to new tasks, such as predicting interaction for unseen protein targets at inference time. In this work, we propose to use HyperNetworks (Schmidhuber, et al., 1992; Ha, et al., 2017) to efficiently transfer information between tasks during inference and thus to accurately
 predict drug-target interactions on unseen protein targets. Our HyperPCM model demonstrates state-of-the-art performance compared to previous methods on multiple
-well-known benchmarks, including Davis, DUD-E, and a ChEMBL derived dataset, particularly excelling in zero-shot inference involving unseen protein targets.
+well-known benchmarks, including Davis, DUD-E, and a ChEMBL-derived dataset, particularly excelling in zero-shot inference involving unseen protein targets.
 
-Workshop papers available on OpenReview from [NeurIPS 2022 AI4Science](https://openreview.net/forum?id=dIX34JWnIAL) and [ELLIS ML4Molecules 2022](https://openreview.net/forum?id=MrUwwGKRhOM).
+Read the full paper in [Journal of Chemical Information and Modeling](https://pubs.acs.org/doi/10.1021/acs.jcim.3c01417).
+Workshop versions are also available on OpenReview from [NeurIPS 2022 AI4Science](https://openreview.net/forum?id=dIX34JWnIAL) and [ELLIS ML4Molecules 2022](https://openreview.net/forum?id=MrUwwGKRhOM).
 
 ![plot](figures/hyper-dti.png)
 
@@ -130,12 +131,12 @@ Optionally, specify `--wandb_username` to log runs in Weights & Biases.
 
 Please cite our work using the following reference.
 ```bibtex
-@inproceedings{svensson2022robust,
-    title={Robust task-specific adaption of drug-target interaction models},
-    author={Svensson, Emma and Hoedt, Pieter-Jan and Hochreiter, Sepp and Klambauer, G\"{u}nter},
-    booktitle={NeurIPS 2022 3d AI for Science Workshop},
-    year={2022},
-    url={https://openreview.net/forum?id=dIX34JWnIAL}
+@article{svensson2024hyperpcm,
+    title={{HyperPCM: Robust Task-Conditioned Modeling of Drug--Target Interactions}},
+    author={Svensson, Emma and Hoedt, Pieter-Jan and Hochreiter, Sepp and Klambauer, G{\"u}nter},
+    journal={Journal of Chemical Information and Modeling},
+    publisher={ACS Publications}
+    year={2024}
 }
 ```
 
