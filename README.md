@@ -30,7 +30,7 @@ Workshop versions are also available on OpenReview from [NeurIPS 2022 AI4Science
 
 ![plot](figures/hyper-dti.png)
 
-Overview of the model architecture, including a) the context module proposed by Schimunek, et al. (2023) that enrich the 
+Overview of the model architecture, including a) the context module proposed by Schimunek, et al. (2023) that enriches the 
 embeddings of protein targets through an associative memory in the form of a Modern Hopfield Network, and b) the weight 
 initialization strategy, PWI, proposed by Chang, et al. (2021). 
 ## Dependencies
@@ -56,7 +56,7 @@ $ pip3 install git+https://github.com/ml-jku/hopfield-layers
 $ pip3 install git+https://github.com/ml-jku/hyper-dti
 ```
 
-After installation, the HyperPCM model can be used by supplying the choise of drug_encoder (CDDD or MolBert) and target_encoder (SeqVec, UniRep, ProtBert, ProtT5, or ESM1b) as well as remaining arguments. If the context module should be used a memory, i.e. context, should also be provided.
+After installation, the HyperPCM model can be used by supplying the choice of drug_encoder (CDDD or MolBert) and target_encoder (SeqVec, UniRep, ProtBert, ProtT5, or ESM1b) as well as remaining arguments. If the context module should be used a memory, i.e. context, should also be provided.
 
 ```python
 from hyper_dti.models.hyper_pcm import HyperPCM
@@ -87,22 +87,22 @@ The HyperPCM model is specifically developed to work for few- and zero-shot infe
 ![plot](figures/pcm.png)
 
 ## Encoders
-Currently supported encoders for drugs and targets reprecitvelly include the following pre-trained open-source models.
+Currently supported encoders for drugs and targets respectively include the following pre-trained open-source models.
 All drug encoders take the SMILES strings of the molecules as input and all target encoders take the amino-acid sequences 
 of the proteins as input.
 
 **Drugs**
 
 - **CDDD**, Continuous and Data-Driven Descriptors proposed by Winter, et al. (2019) available at [github](https://github.com/jrwnter/cddd).
-- **MolBERT**, Molecular representation learning with the BERT languange-model proposed by Fabian, et al. (2020) available at [github](https://github.com/BenevolentAI/MolBERT).
+- **MolBERT**, Molecular representation learning with the BERT language model proposed by Fabian, et al. (2020) available at [github](https://github.com/BenevolentAI/MolBERT).
 
 **Targets**
 
-- **SeqVec** proposed by Heinzinger, et al. (2019) available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
-- **UniRep** proposed by Alley, et al. (2019) available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
-- **ProtBERT** proposed by Elnaggar, et al. (2021) available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
-- **ProtT5** proposed by Elnaggar, et al. (2021) available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
-- **ESM-1b** proposed by Rives, et al. (2021) available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
+- **SeqVec** proposed by Heinzinger, et al. (2019) is available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
+- **UniRep** proposed by Alley, et al. (2019) is available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
+- **ProtBERT** proposed by Elnaggar, et al. (2021) is available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
+- **ProtT5** proposed by Elnaggar, et al. (2021) is available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
+- **ESM-1b** proposed by Rives, et al. (2021) is available through [bio_embeddings](https://github.com/sacdallago/bio_embeddings).
 
 ## Usage
 Use this repository to train and evaluate our HyperPCM model, or the baseline DeepPCM, with
@@ -113,7 +113,7 @@ $ python main.py --name experiment1 --architecture [model] --dataset [dataset] -
 Optionally, specify `--wandb_username` to log runs in Weights & Biases and find other flags for hyperparameters and settings in [config.py](https://github.com/ml-jku/hyper-dti/blob/main/settings/config.py).
 
 ### Pre-compute embeddings
-Embeddings for drug compounds and protein targets can either be computed directly during runtime or be prepared in advanced. 
+Embeddings for drug compounds and protein targets can either be computed directly during runtime or be prepared in advance. 
 To pre-compute them run the following script for the drug and target encoders of interest respectively. 
 ```bash
 $ python precompute_embeddings.py --dataset Lenselink --input_type Drug --encoder_name CDDD
@@ -161,7 +161,7 @@ Mysinger, M. M., et al. "Directory of useful decoys, enhanced (DUD-E): better li
 
 Tang, J., et al. "Making sense of large-scale kinase inhibitor bioactivity data sets: a comparative and integrative analysis." Journal of Chemical Information and Modeling 54.3 (2014): 735-743.
 
-Lenselink, E. B., et al. "Beyond the hype: deep neural networks outperform established methods using a ChEMBL bioactivity benchmark set." Journal of Cheminformatics 9.1 (2017): 1-14.
+Lenselink, E. B., et al. "Beyond the hype: Deep neural networks outperform established methods using a ChEMBL bioactivity benchmark set." Journal of Cheminformatics 9.1 (2017): 1-14.
 
 Ha, D., et al. “HyperNetworks”. ICLR, 2017.
 
