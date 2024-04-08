@@ -135,8 +135,12 @@ Please cite our work using the following reference.
     title={{HyperPCM: Robust Task-Conditioned Modeling of Drug--Target Interactions}},
     author={Svensson, Emma and Hoedt, Pieter-Jan and Hochreiter, Sepp and Klambauer, G{\"u}nter},
     journal={Journal of Chemical Information and Modeling},
-    publisher={ACS Publications},
-    year={2024}
+    volume = {64},
+    number = {7},
+    pages = {2539-2553},
+    year = {2024},
+    doi = {10.1021/acs.jcim.3c01417},
+    publisher={ACS Publications}
 }
 ```
 
