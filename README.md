@@ -155,6 +155,15 @@ Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Task-conditioned model
 
 Svensson, E., Hoedt, P.-J., Hochreiter, S., Klambauer, G. Robust task-specific adaption of drug-target interaction models. Poster presented at: Women in Machine Learning (WiML). Thirty-ninth International Conference on Machine Learning; 2022 Jun 17-23; Baltimore, MD.
 
+## Funding
+
+This work has received funding from the European Union’s Horizon 2020
+research and innovation programme under the Marie Skłodowska-Curie
+Actions, grant agreement “Advanced machine learning for Innovative Drug
+Discovery (AIDD)” No 956832”. [Homepage](https://ai-dd.eu/).
+
+![plot](figures/aidd.png)
+
 ## References
 
 Schmidhuber, J., “Learning to control fast-weight memories: An alternative to dynamic recurrent networks.” Neural Computation, 1992.
